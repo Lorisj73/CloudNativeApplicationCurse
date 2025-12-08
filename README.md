@@ -1,5 +1,11 @@
 # Gym Management System
 
+[![CI Pipeline](https://github.com/Lorisj73/CloudNativeApplicationCurse/actions/workflows/ci.yml/badge.svg)](https://github.com/Lorisj73/CloudNativeApplicationCurse/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Lorisj73_CloudNativeApplicationCurse)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+
+
 A complete fullstack gym management application built with modern web technologies.
 
 ## Features
@@ -43,6 +49,48 @@ A complete fullstack gym management application built with modern web technologi
 - **Docker Compose** for orchestration
 - **PostgreSQL** database
 - **Nginx** for frontend serving
+- **GitHub Actions** for CI/CD
+- **SonarCloud** for code quality analysis
+
+## CI/CD Pipeline
+
+### Pipeline Overview
+
+```mermaid
+graph LR
+    A[Push/PR] --> B[Lint]
+    B --> C[Build]
+    B --> D[Test]
+    D --> E[SonarCloud]
+    C --> F[Quality Gate]
+    E --> F
+    F --> G{All Pass?}
+    G -->|Yes| H[✅ Merge Allowed]
+    G -->|No| I[❌ Blocked]
+```
+
+### Pipeline Jobs
+
+| Job | Description | Runs On |
+|-----|-------------|---------|
+| **Lint** | ESLint on frontend & backend | self-hosted |
+| **Build** | Build frontend & backend | self-hosted |
+| **Test** | Backend tests with PostgreSQL | self-hosted |
+| **SonarCloud** | Code quality & security analysis | self-hosted |
+| **Quality Gate** | Verify all checks pass | self-hosted |
+
+### Workflow Triggers
+
+- **Pull Requests** to `develop` or `main`
+- **Push** to `develop` or `main`
+
+### Quality Requirements
+
+All PRs must pass:
+- ✅ Linting (no errors)
+- ✅ Build (successful compilation)
+- ✅ Tests (all tests passing)
+- ✅ SonarCloud Quality Gate
 
 ## Quick Start
 
