@@ -25,15 +25,15 @@ jobs:
           node-version: '18'
           
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
         
       - name: Install frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: npm install
         
       - name: Install backend dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm install
         
       - name: Lint frontend
         run: npm run lint:front
@@ -57,7 +57,7 @@ jobs:
           
       - name: Install frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: npm install
         
       - name: Build frontend
         working-directory: ./frontend
@@ -65,7 +65,7 @@ jobs:
         
       - name: Install backend dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm install
         
       - name: Upload frontend build artifacts
         uses: actions/upload-artifact@v4
@@ -106,13 +106,14 @@ jobs:
           
       - name: Install backend dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm install
         
       - name: Setup test environment
         working-directory: ./backend
+        shell: pwsh
         run: |
-          echo "DATABASE_URL=postgresql://testuser:testpass@localhost:5432/testdb" > .env
-          echo "NODE_ENV=test" >> .env
+          "DATABASE_URL=postgresql://testuser:testpass@localhost:5432/testdb" | Out-File -FilePath .env -Encoding utf8
+          "NODE_ENV=test" | Out-File -FilePath .env -Append -Encoding utf8
           
       - name: Run Prisma migrations
         working-directory: ./backend
@@ -141,7 +142,7 @@ jobs:
           
       - name: Install backend dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm install
         
       - name: Run tests with coverage
         working-directory: ./backend
@@ -163,12 +164,13 @@ jobs:
             -Dsonar.qualitygate.wait=true
             
       - name: Check Quality Gate
+        shell: pwsh
         run: |
-          echo "Quality Gate check completed"
-          if [ "${{ job.status }}" != "success" ]; then
-            echo "Quality Gate failed!"
+          Write-Host "Quality Gate check completed"
+          if ("${{ job.status }}" -ne "success") {
+            Write-Host "Quality Gate failed!"
             exit 1
-          fi
+          }
 
   quality-gate:
     name: Quality Gate Status
@@ -178,13 +180,16 @@ jobs:
     
     steps:
       - name: Check all jobs status
+        shell: pwsh
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.build.result }}" != "success" ] || \
-             [ "${{ needs.test.result }}" != "success" ] || \
-             [ "${{ needs.sonarcloud.result }}" != "success" ]; then
-            echo "❌ Quality Gate FAILED - One or more jobs failed"
+          $lintResult = "${{ needs.lint.result }}"
+          $buildResult = "${{ needs.build.result }}"
+          $testResult = "${{ needs.test.result }}"
+          $sonarResult = "${{ needs.sonarcloud.result }}"
+          
+          if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success" -or $sonarResult -ne "success") {
+            Write-Host "❌ Quality Gate FAILED - One or more jobs failed"
             exit 1
-          else
-            echo "✅ Quality Gate PASSED - All checks successful"
-          fi
+          } else {
+            Write-Host "✅ Quality Gate PASSED - All checks successful"
+          }
