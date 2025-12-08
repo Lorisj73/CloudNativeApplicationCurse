@@ -98,51 +98,33 @@ jobs:
         continue-on-error: false
 
   sonarcloud:
-    name: SonarCloud Analysis
+    name: SonarCloud Scan & Quality Gate
     runs-on: self-hosted
-    needs: [lint, test]
+    needs: test
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm install
-        
-      - name: Run tests with coverage
-        working-directory: ./backend
-        run: npm test -- --coverage
-        continue-on-error: true
-      
-      - name: Install unzip (if needed)
-        shell: powershell
-        run: |
-          if (-not (Get-Command unzip -ErrorAction SilentlyContinue)) {
-            Write-Host "unzip not found, will use PowerShell Expand-Archive instead"
-          }
-        
-      - name: SonarQube Scan
+      - uses: actions/checkout@v3
+
+      - name: Install Backend Dependencies
+        run: cd backend && npm install
+
+      - name: Run SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
+        with:
+          args: >
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.projectKey=mathyscxsl_CloudNativeApplicationCurse
+            -Dsonar.organization=mathyscxsl
+            -Dsonar.sources=backend/src
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number || github.ref }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref || github.ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref || 'develop' }}
+
+      - name: SonarCloud Quality Gate check
+        uses: sonarsource/sonarqube-quality-gate-action@cf038b0e0cdecfa9e56c198bbb7d21d751d62c3b
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-            
-      - name: Check Quality Gate
-        shell: powershell
-        run: |
-          Write-Host "Quality Gate check completed"
-          if ("${{ job.status }}" -ne "success") {
-            Write-Host "Quality Gate failed!"
-            exit 1
-          }
 
   quality-gate:
     name: Quality Gate Status
