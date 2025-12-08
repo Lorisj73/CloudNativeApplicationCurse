@@ -121,18 +121,19 @@ jobs:
         working-directory: ./backend
         run: npm test -- --coverage
         continue-on-error: true
+      
+      - name: Install unzip (if needed)
+        shell: powershell
+        run: |
+          if (-not (Get-Command unzip -ErrorAction SilentlyContinue)) {
+            Write-Host "unzip not found, will use PowerShell Expand-Archive instead"
+          }
         
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.organization=lorisj73
-            -Dsonar.projectKey=Lorisj73_CloudNativeApplicationCurse
-            -Dsonar.sources=backend/src
-            -Dsonar.tests=backend/tests
-            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
+          SONAR_HOST_URL: https://sonarcloud.io
             
       - name: Check Quality Gate
         shell: powershell
