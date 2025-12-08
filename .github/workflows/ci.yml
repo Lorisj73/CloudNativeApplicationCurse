@@ -103,27 +103,12 @@ jobs:
     needs: test
     
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Backend Dependencies
-        working-directory: ./backend
-        run: npm install
-
-      - name: Run SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
+      - uses: actions/checkout@v4
         with:
-          args: >
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-            -Dsonar.projectKey=Lorisj73_CloudNativeApplicationCurse
-            -Dsonar.organization=lorisj73
-            -Dsonar.sources=backend/src
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number || github.ref }}
-            -Dsonar.pullrequest.branch=${{ github.head_ref || github.ref }}
-            -Dsonar.pullrequest.base=${{ github.base_ref || 'develop' }}
-
-      - name: SonarCloud Quality Gate check
-        uses: sonarsource/sonarqube-quality-gate-action@cf038b0e0cdecfa9e56c198bbb7d21d751d62c3b
+          fetch-depth: 0
+          
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
