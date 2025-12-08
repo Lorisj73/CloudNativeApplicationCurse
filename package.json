@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "husky": "^9.1.7"
+  },
+  "scripts": {
+    "prepare": "husky install",
+    "lint:front": "cd frontend && npm run lint",
+    "lint:back": "cd backend && npm run lint",
+    "lint:all": "npm run lint:front && npm run lint:back"
+  }
+}

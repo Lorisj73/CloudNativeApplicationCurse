@@ -10,13 +10,20 @@
           <div v-if="currentUser">
             <ul class="nav-links">
               <li>
-                <router-link to="/dashboard">Dashboard</router-link>
+                <router-link to="/dashboard">
+                  Dashboard
+                </router-link>
               </li>
               <li v-if="currentUser.role === 'ADMIN'">
-                <router-link to="/admin">Administration</router-link>
+                <router-link to="/admin">
+                  Administration
+                </router-link>
               </li>
               <li>
-                <a href="#" @click="logout">
+                <a
+                  href="#"
+                  @click="logout"
+                >
                   Déconnexion ({{ currentUser.firstname }} {{ currentUser.lastname }})
                 </a>
               </li>
