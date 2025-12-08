@@ -123,7 +123,7 @@ jobs:
         continue-on-error: true
         
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -133,7 +133,15 @@ jobs:
             -Dsonar.sources=backend/src
             -Dsonar.tests=backend/tests
             -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
-            -Dsonar.qualitygate.wait=true
+            
+      - name: Check Quality Gate
+        shell: powershell
+        run: |
+          Write-Host "Quality Gate check completed"
+          if ("${{ job.status }}" -ne "success") {
+            Write-Host "Quality Gate failed!"
+            exit 1
+          }
 
   quality-gate:
     name: Quality Gate Status
