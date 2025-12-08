@@ -1,5 +1,10 @@
 # Gym Management System
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=c67686a0a214aa988446eefcb11f0cb5c65d0b8d&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=c67686a0a214aa988446eefcb11f0cb5c65d0b8d)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=c67686a0a214aa988446eefcb11f0cb5c65d0b8d&metric=bugs)](https://sonarcloud.io/summary/new_code?id=c67686a0a214aa988446eefcb11f0cb5c65d0b8d)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=c67686a0a214aa988446eefcb11f0cb5c65d0b8d&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=c67686a0a214aa988446eefcb11f0cb5c65d0b8d)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=c67686a0a214aa988446eefcb11f0cb5c65d0b8d&metric=coverage)](https://sonarcloud.io/summary/new_code?id=c67686a0a214aa988446eefcb11f0cb5c65d0b8d)
+
 A complete fullstack gym management application built with modern web technologies.
 
 ## Features
