@@ -115,7 +115,7 @@ jobs:
             Write-Error "Scanner not found at $scannerPath"
             exit 1
           }
-          & $scannerPath -Dsonar.token="$env:SONAR_TOKEN"
+          & $scannerPath "-Dsonar.token=$env:SONAR_TOKEN"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
