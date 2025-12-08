@@ -149,14 +149,14 @@ jobs:
         continue-on-error: true
         
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github-action@v3.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
             -Dsonar.organization=lorisj73
-            -Dsonar.projectKey=c67686a0a214aa988446eefcb11f0cb5c65d0b8d
+            -Dsonar.projectKey=Lorisj73_CloudNativeApplicationCurse
             -Dsonar.sources=backend/src
             -Dsonar.tests=backend/tests
             -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
