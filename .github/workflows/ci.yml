@@ -107,8 +107,15 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
+      - name: Run SonarQube Scan
+        shell: powershell
+        run: |
+          $scannerPath = "C:\sonar-scanner\sonar-scanner-7.2.0.5079-windows-x64\bin\sonar-scanner.bat"
+          if (-not (Test-Path $scannerPath)) {
+            Write-Error "Scanner not found at $scannerPath"
+            exit 1
+          }
+          & $scannerPath -Dsonar.token="${{ secrets.SONAR_TOKEN }}"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
