@@ -114,8 +114,8 @@ jobs:
         with:
           args: >
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-            -Dsonar.projectKey=mathyscxsl_CloudNativeApplicationCurse
-            -Dsonar.organization=mathyscxsl
+            -Dsonar.projectKey=Lorisj73_CloudNativeApplicationCurse
+            -Dsonar.organization=lorisj73
             -Dsonar.sources=backend/src
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.pullrequest.key=${{ github.event.pull_request.number || github.ref }}
