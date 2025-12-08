@@ -3,28 +3,51 @@
     <h1>👑 Panel d'Administration</h1>
     
     <!-- Admin Dashboard Stats -->
-    <div v-if="adminDashboard" class="admin-stats">
+    <div
+      v-if="adminDashboard"
+      class="admin-stats"
+    >
       <h2>📊 Statistiques Globales</h2>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-number">{{ adminDashboard.users.total }}</div>
-          <div class="stat-label">Utilisateurs totaux</div>
+          <div class="stat-number">
+            {{ adminDashboard.users.total }}
+          </div>
+          <div class="stat-label">
+            Utilisateurs totaux
+          </div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ adminDashboard.users.active }}</div>
-          <div class="stat-label">Utilisateurs actifs</div>
+          <div class="stat-number">
+            {{ adminDashboard.users.active }}
+          </div>
+          <div class="stat-label">
+            Utilisateurs actifs
+          </div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ adminDashboard.bookings.total }}</div>
-          <div class="stat-label">Réservations totales</div>
+          <div class="stat-number">
+            {{ adminDashboard.bookings.total }}
+          </div>
+          <div class="stat-label">
+            Réservations totales
+          </div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ adminDashboard.bookings.noShow }}</div>
-          <div class="stat-label">No-shows</div>
+          <div class="stat-number">
+            {{ adminDashboard.bookings.noShow }}
+          </div>
+          <div class="stat-label">
+            No-shows
+          </div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ adminDashboard.revenue.monthly }}€</div>
-          <div class="stat-label">Revenus mensuels</div>
+          <div class="stat-number">
+            {{ adminDashboard.revenue.monthly }}€
+          </div>
+          <div class="stat-label">
+            Revenus mensuels
+          </div>
         </div>
       </div>
     </div>
@@ -42,44 +65,75 @@
     </div>
     
     <!-- Users Management -->
-    <div v-if="activeTab === 'users'" class="tab-content">
+    <div
+      v-if="activeTab === 'users'"
+      class="tab-content"
+    >
       <div class="section-header">
         <h3>👥 Gestion des Utilisateurs</h3>
-        <button class="btn" @click="showUserForm = !showUserForm">
+        <button
+          class="btn"
+          @click="showUserForm = !showUserForm"
+        >
           {{ showUserForm ? 'Annuler' : 'Nouvel Utilisateur' }}
         </button>
       </div>
       
       <!-- User Form -->
-      <div v-if="showUserForm" class="card form-section">
+      <div
+        v-if="showUserForm"
+        class="card form-section"
+      >
         <h4>{{ editingUser ? 'Modifier' : 'Créer' }} un utilisateur</h4>
         <form @submit.prevent="submitUser">
           <div class="form-row">
             <div class="form-group">
               <label>Prénom</label>
-              <input v-model="userForm.firstname" required>
+              <input
+                v-model="userForm.firstname"
+                required
+              >
             </div>
             <div class="form-group">
               <label>Nom</label>
-              <input v-model="userForm.lastname" required>
+              <input
+                v-model="userForm.lastname"
+                required
+              >
             </div>
           </div>
           <div class="form-group">
             <label>Email</label>
-            <input type="email" v-model="userForm.email" required>
+            <input
+              v-model="userForm.email"
+              type="email"
+              required
+            >
           </div>
           <div class="form-group">
             <label>Rôle</label>
             <select v-model="userForm.role">
-              <option value="USER">Utilisateur</option>
-              <option value="ADMIN">Administrateur</option>
+              <option value="USER">
+                Utilisateur
+              </option>
+              <option value="ADMIN">
+                Administrateur
+              </option>
             </select>
           </div>
           <div class="form-actions">
-            <button type="submit" class="btn" :disabled="formLoading">
+            <button
+              type="submit"
+              class="btn"
+              :disabled="formLoading"
+            >
               {{ formLoading ? 'Traitement...' : (editingUser ? 'Modifier' : 'Créer') }}
             </button>
-            <button type="button" class="btn btn-secondary" @click="cancelUserForm">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="cancelUserForm"
+            >
               Annuler
             </button>
           </div>
@@ -99,7 +153,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in users" :key="user.id">
+            <tr
+              v-for="user in users"
+              :key="user.id"
+            >
               <td>{{ user.firstname }} {{ user.lastname }}</td>
               <td>{{ user.email }}</td>
               <td>
@@ -109,10 +166,16 @@
               </td>
               <td>{{ formatDate(user.dateJoined) }}</td>
               <td>
-                <button class="btn btn-secondary" @click="editUser(user)">
+                <button
+                  class="btn btn-secondary"
+                  @click="editUser(user)"
+                >
                   Modifier
                 </button>
-                <button class="btn btn-danger" @click="deleteUser(user.id)">
+                <button
+                  class="btn btn-danger"
+                  @click="deleteUser(user.id)"
+                >
                   Supprimer
                 </button>
               </td>
@@ -123,60 +186,104 @@
     </div>
     
     <!-- Classes Management -->
-    <div v-if="activeTab === 'classes'" class="tab-content">
+    <div
+      v-if="activeTab === 'classes'"
+      class="tab-content"
+    >
       <div class="section-header">
         <h3>🏋️ Gestion des Cours</h3>
         <div>
-          <button class="btn btn-danger" @click="purgeOldClasses" :disabled="formLoading">
+          <button
+            class="btn btn-danger"
+            :disabled="formLoading"
+            @click="purgeOldClasses"
+          >
             {{ formLoading ? 'Purge...' : 'Purger anciens cours' }}
           </button>
-          <button class="btn" @click="showClassForm = !showClassForm">
+          <button
+            class="btn"
+            @click="showClassForm = !showClassForm"
+          >
             {{ showClassForm ? 'Annuler' : 'Nouveau Cours' }}
           </button>
         </div>
       </div>
       
       <!-- Class Form -->
-      <div v-if="showClassForm" class="card form-section">
+      <div
+        v-if="showClassForm"
+        class="card form-section"
+      >
         <h4>{{ editingClass ? 'Modifier' : 'Créer' }} un cours</h4>
         <form @submit.prevent="submitClass">
           <div class="form-row">
             <div class="form-group">
               <label>Titre</label>
-              <input v-model="classForm.title" required>
+              <input
+                v-model="classForm.title"
+                required
+              >
             </div>
             <div class="form-group">
               <label>Coach</label>
-              <input v-model="classForm.coach" required>
+              <input
+                v-model="classForm.coach"
+                required
+              >
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label>Date et heure</label>
-              <input type="datetime-local" v-model="classForm.datetime" required>
+              <input
+                v-model="classForm.datetime"
+                type="datetime-local"
+                required
+              >
             </div>
             <div class="form-group">
               <label>Durée (minutes)</label>
-              <input type="number" v-model="classForm.duration" min="1" required>
+              <input
+                v-model="classForm.duration"
+                type="number"
+                min="1"
+                required
+              >
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label>Capacité</label>
-              <input type="number" v-model="classForm.capacity" min="1" required>
+              <input
+                v-model="classForm.capacity"
+                type="number"
+                min="1"
+                required
+              >
             </div>
             <div class="form-group">
               <label>
-                <input type="checkbox" v-model="classForm.isCancelled">
+                <input
+                  v-model="classForm.isCancelled"
+                  type="checkbox"
+                >
                 Cours annulé
               </label>
             </div>
           </div>
           <div class="form-actions">
-            <button type="submit" class="btn" :disabled="formLoading">
+            <button
+              type="submit"
+              class="btn"
+              :disabled="formLoading"
+            >
               {{ formLoading ? 'Traitement...' : (editingClass ? 'Modifier' : 'Créer') }}
             </button>
-            <button type="button" class="btn btn-secondary" @click="cancelClassForm">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="cancelClassForm"
+            >
               Annuler
             </button>
           </div>
@@ -198,7 +305,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="classItem in classes" :key="classItem.id">
+            <tr
+              v-for="classItem in classes"
+              :key="classItem.id"
+            >
               <td>{{ classItem.title }}</td>
               <td>{{ classItem.coach }}</td>
               <td>{{ formatDateTime(classItem.datetime) }}</td>
@@ -210,10 +320,16 @@
                 </span>
               </td>
               <td>
-                <button class="btn btn-secondary" @click="editClass(classItem)">
+                <button
+                  class="btn btn-secondary"
+                  @click="editClass(classItem)"
+                >
                   Modifier
                 </button>
-                <button class="btn btn-danger" @click="deleteClass(classItem.id)">
+                <button
+                  class="btn btn-danger"
+                  @click="deleteClass(classItem.id)"
+                >
                   Supprimer
                 </button>
               </td>
@@ -224,10 +340,17 @@
     </div>
     
     <!-- Bookings Management -->
-    <div v-if="activeTab === 'bookings'" class="tab-content">
+    <div
+      v-if="activeTab === 'bookings'"
+      class="tab-content"
+    >
       <div class="section-header">
         <h3>📅 Gestion des Réservations</h3>
-        <button class="btn" @click="updateNoShows" :disabled="formLoading">
+        <button
+          class="btn"
+          :disabled="formLoading"
+          @click="updateNoShows"
+        >
           {{ formLoading ? 'Mise à jour...' : 'Mettre à jour No-Shows' }}
         </button>
       </div>
@@ -245,7 +368,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="booking in bookings" :key="booking.id">
+            <tr
+              v-for="booking in bookings"
+              :key="booking.id"
+            >
               <td>{{ booking.user.firstname }} {{ booking.user.lastname }}</td>
               <td>{{ booking.class.title }}</td>
               <td>{{ formatDateTime(booking.class.datetime) }}</td>
@@ -258,14 +384,23 @@
               <td>
                 <select 
                   :value="booking.status" 
-                  @change="updateBookingStatus(booking.id, $event.target.value)"
                   :disabled="formLoading"
+                  @change="updateBookingStatus(booking.id, $event.target.value)"
                 >
-                  <option value="CONFIRMED">Confirmé</option>
-                  <option value="CANCELLED">Annulé</option>
-                  <option value="NO_SHOW">No-Show</option>
+                  <option value="CONFIRMED">
+                    Confirmé
+                  </option>
+                  <option value="CANCELLED">
+                    Annulé
+                  </option>
+                  <option value="NO_SHOW">
+                    No-Show
+                  </option>
                 </select>
-                <button class="btn btn-danger" @click="deleteBooking(booking.id)">
+                <button
+                  class="btn btn-danger"
+                  @click="deleteBooking(booking.id)"
+                >
                   Supprimer
                 </button>
               </td>
@@ -276,7 +411,10 @@
     </div>
     
     <!-- Error/Success Messages -->
-    <div v-if="message" :class="`alert alert-${message.type}`">
+    <div
+      v-if="message"
+      :class="`alert alert-${message.type}`"
+    >
       {{ message.text }}
     </div>
   </div>

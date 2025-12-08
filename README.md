@@ -223,13 +223,75 @@ docker exec -it gym_db psql -U postgres -d gym_management
 - Monthly billing with no-show penalties
 - Recent booking history
 
+## Git Workflow
+
+### Branch Strategy
+
+- **Main Branches**:
+  - `main` - Production-ready code
+  - `develop` - Integration branch for features
+
+- **Feature Branches**:
+  - `feature/<feature-name>` - New features and improvements
+  - Example: `feature/user-authentication`, `feature/booking-system`
+
+### Branch Rules
+
+- ❌ No direct commits to `main` or `develop`
+- ✅ All changes must go through Pull Requests to `develop`
+- ✅ Feature branches must be created from `develop`
+- ✅ PRs require review before merging
+
+### Commit Convention
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) specification.
+
+**Format**: `<type>: <description>`
+
+**Types**:
+- `feat`: New feature
+- `fix`: Bug fix
+- `chore`: Maintenance tasks (dependencies, config)
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, missing semi-colons)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `perf`: Performance improvements
+
+**Examples**:
+```bash
+feat: add user authentication system
+fix: correct Postgres connection issue
+chore: update NestJS dependencies
+docs: improve API documentation
+```
+
+### Git Hooks
+
+This project uses [Husky](https://typicar.com/husky) for Git hooks:
+
+- **`pre-commit`**: Runs linting on frontend and backend code
+  - Executes: `npm run lint:all`
+  - Ensures code quality before commit
+
+- **`commit-msg`**: Validates commit messages with commitlint
+  - Enforces conventional commit format
+  - Rejects non-compliant commit messages
+
+**Setup**:
+```bash
+npm install
+npm run prepare
+```
+
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch from `develop`: `git checkout -b feature/my-feature develop`
+3. Make your changes following the commit convention
+4. Ensure all hooks pass (linting and commit message validation)
+5. Push your branch and submit a Pull Request to `develop`
+6. Wait for code review and approval
 
 ## License
 
