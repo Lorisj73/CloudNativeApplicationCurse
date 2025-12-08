@@ -149,7 +149,7 @@ jobs:
         continue-on-error: true
         
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3.1.0
+        uses: SonarSource/sonarcloud-github-action@4b4d54fa2dfe6e3c8628944855a2e68e1e6960e4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
