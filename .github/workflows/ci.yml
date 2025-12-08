@@ -79,21 +79,6 @@ jobs:
     runs-on: self-hosted
     needs: lint
     
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -102,22 +87,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
           
       - name: Install backend dependencies
         working-directory: ./backend
         run: npm install
-        
-      - name: Setup test environment
-        working-directory: ./backend
-        shell: pwsh
-        run: |
-          "DATABASE_URL=postgresql://testuser:testpass@localhost:5432/testdb" | Out-File -FilePath .env -Encoding utf8
-          "NODE_ENV=test" | Out-File -FilePath .env -Append -Encoding utf8
-          
-      - name: Run Prisma migrations
-        working-directory: ./backend
-        run: npx prisma migrate deploy
         
       - name: Run tests
         working-directory: ./backend
@@ -164,7 +137,7 @@ jobs:
             -Dsonar.qualitygate.wait=true
             
       - name: Check Quality Gate
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "Quality Gate check completed"
           if ("${{ job.status }}" -ne "success") {
@@ -180,7 +153,7 @@ jobs:
     
     steps:
       - name: Check all jobs status
-        shell: pwsh
+        shell: powershell
         run: |
           $lintResult = "${{ needs.lint.result }}"
           $buildResult = "${{ needs.build.result }}"
