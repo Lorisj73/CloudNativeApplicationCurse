@@ -19,6 +19,11 @@ RUN npm run build
 # Stage 2: Production with Nginx
 FROM nginx:alpine AS production
 
+# Add OCI labels for GHCR
+LABEL org.opencontainers.image.source=https://github.com/Lorisj73/CloudNativeApplicationCurse
+LABEL org.opencontainers.image.description="Gym Management Frontend"
+LABEL org.opencontainers.image.licenses=MIT
+
 # Install wget for health checks
 RUN apk add --no-cache wget
 

@@ -20,6 +20,11 @@ COPY . .
 # Stage 2: Production
 FROM node:20-alpine AS production
 
+# Add OCI labels for GHCR
+LABEL org.opencontainers.image.source=https://github.com/Lorisj73/CloudNativeApplicationCurse
+LABEL org.opencontainers.image.description="Gym Management Backend API"
+LABEL org.opencontainers.image.licenses=MIT
+
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl libc6-compat
 
