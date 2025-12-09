@@ -76,7 +76,7 @@ jobs:
         shell: powershell
         run: |
           Write-Host "📦 Built images:"
-          docker images | Select-String "ci-build"
+          docker images | Select-String 'ci-build'
 
   test:
     name: Backend Tests
