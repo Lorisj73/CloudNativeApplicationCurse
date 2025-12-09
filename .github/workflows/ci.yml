@@ -182,105 +182,97 @@ jobs:
   publish:
     name: Publish Images to GHCR
     runs-on: self-hosted
-    needs: [build, smoke-tests]
+    needs: [lint, build, test, smoke-tests]
     if: github.event_name == 'push'
-    
+    env:
+      COMMIT_SHA: ${{ github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Login to GitHub Container Registry
-        shell: powershell
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT != '' && secrets.CR_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Prepare image tags
+        id: imgvars
+        shell: pwsh
         run: |
-          Write-Host "Logging in to GHCR..."
-          $user = "${{ github.repository_owner }}".ToLower()
-          Write-Host "Username: $user"
-          Write-Host "Registry: ghcr.io"
+          $owner = "${{ github.repository_owner }}".ToLower()
+          $isMain = '${{ github.ref }}' -eq 'refs/heads/main'
+          "owner=$owner" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "isMain=$isMain" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-          # Validate secrets presence (length only, secret content not shown)
-          $crPat = "${{ secrets.CR_PAT }}"
-          $ghTok = "${{ secrets.GITHUB_TOKEN }}"
-          Write-Host "CR_PAT length: $($crPat.Length)"
-          Write-Host "GITHUB_TOKEN length: $($ghTok.Length)"
-
-          if ([string]::IsNullOrEmpty($crPat)) {
-            Write-Error "CR_PAT is empty or not accessible in this context"
-            exit 1
-          }
-          
-          # Clear any existing creds (ignore failures)
-          docker logout ghcr.io | Out-Null
-
-          # Try login with CR_PAT
-          echo $crPat | docker login ghcr.io -u $user --password-stdin
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "CR_PAT login failed, trying GITHUB_TOKEN as fallback..."
-            echo $ghTok | docker login ghcr.io -u $user --password-stdin
-          }
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "GHCR login failed with both CR_PAT and GITHUB_TOKEN"
-            exit 1
-          }
-
-          Write-Host "Logged in to GHCR successfully"
-        
-      - name: Tag and push backend image
-        shell: powershell
+      - name: Build backend image
+        shell: pwsh
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
         run: |
-          $sha = "${{ github.sha }}".Substring(0, 7)
-          $username = "${{ github.repository_owner }}".ToLower()
-          
-          Write-Host "Tagging backend image with SHA: $sha"
-          docker tag cloudnativeapplicationcurse-backend:ci-build ghcr.io/$username/gym-backend:$sha
-          
-          Write-Host "Pushing backend:$sha..."
-          docker push ghcr.io/$username/gym-backend:$sha
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Backend push failed"
-            exit 1
+          $sha = "$env:COMMIT_SHA"
+          $backendTags = @("ghcr.io/$env:OWNER/project-backend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $backendTags += "ghcr.io/$env:OWNER/project-backend:latest" }
+
+          if ($backendTags.Count -gt 1) {
+            docker build -t $backendTags[0] -t $backendTags[1] ./backend
+          } else {
+            docker build -t $backendTags[0] ./backend
           }
-          
-          if ("${{ github.ref }}" -eq "refs/heads/main") {
-            Write-Host "Tagging backend as latest..."
-            docker tag cloudnativeapplicationcurse-backend:ci-build ghcr.io/$username/gym-backend:latest
-            docker push ghcr.io/$username/gym-backend:latest
-            Write-Host "Backend:latest pushed"
-          }
-          
-          Write-Host "Backend image published"
-        
-      - name: Tag and push frontend image
-        shell: powershell
+
+          foreach ($tag in $backendTags) { Write-Host "Built backend tag: $tag" }
+
+      - name: Build frontend image
+        shell: pwsh
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
         run: |
-          $sha = "${{ github.sha }}".Substring(0, 7)
-          $username = "${{ github.repository_owner }}".ToLower()
-          
-          Write-Host "Tagging frontend image with SHA: $sha"
-          docker tag cloudnativeapplicationcurse-frontend:ci-build ghcr.io/$username/gym-frontend:$sha
-          
-          Write-Host "Pushing frontend:$sha..."
-          docker push ghcr.io/$username/gym-frontend:$sha
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Frontend push failed"
-            exit 1
+          $sha = "$env:COMMIT_SHA"
+          $frontendTags = @("ghcr.io/$env:OWNER/project-frontend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $frontendTags += "ghcr.io/$env:OWNER/project-frontend:latest" }
+
+          if ($frontendTags.Count -gt 1) {
+            docker build -t $frontendTags[0] -t $frontendTags[1] ./frontend
+          } else {
+            docker build -t $frontendTags[0] ./frontend
           }
-          
-          if ("${{ github.ref }}" -eq "refs/heads/main") {
-            Write-Host "Tagging frontend as latest..."
-            docker tag cloudnativeapplicationcurse-frontend:ci-build ghcr.io/$username/gym-frontend:latest
-            docker push ghcr.io/$username/gym-frontend:latest
-            Write-Host "Frontend:latest pushed"
-          }
-          
-          Write-Host "Frontend image published"
-        
-      - name: Logout from GHCR
-        if: always()
-        shell: powershell
+
+          foreach ($tag in $frontendTags) { Write-Host "Built frontend tag: $tag" }
+
+      - name: Push backend images
+        shell: pwsh
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
         run: |
-          docker logout ghcr.io
-          Write-Host "Logged out from GHCR"
+          $sha = "$env:COMMIT_SHA"
+          $backendTags = @("ghcr.io/$env:OWNER/project-backend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $backendTags += "ghcr.io/$env:OWNER/project-backend:latest" }
+
+          foreach ($tag in $backendTags) {
+            Write-Host "Pushing $tag"
+            docker push $tag
+          }
+
+      - name: Push frontend images
+        shell: pwsh
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
+        run: |
+          $sha = "$env:COMMIT_SHA"
+          $frontendTags = @("ghcr.io/$env:OWNER/project-frontend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $frontendTags += "ghcr.io/$env:OWNER/project-frontend:latest" }
+
+          foreach ($tag in $frontendTags) {
+            Write-Host "Pushing $tag"
+            docker push $tag
+          }
+
+  
 
   # sonarcloud:
   #   name: SonarCloud Scan & Quality Gate
