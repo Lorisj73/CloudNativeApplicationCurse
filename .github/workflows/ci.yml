@@ -53,29 +53,29 @@ jobs:
       - name: Build backend Docker image
         shell: powershell
         run: |
-          Write-Host "🐳 Building backend Docker image..."
+          Write-Host "Building backend Docker image..."
           docker build -t cloudnativeapplicationcurse-backend:ci-build ./backend
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Backend build failed"
+            Write-Error "Backend build failed"
             exit 1
           }
-          Write-Host "✅ Backend image built successfully"
+          Write-Host "Backend image built successfully"
         
       - name: Build frontend Docker image
         shell: powershell
         run: |
-          Write-Host "🐳 Building frontend Docker image..."
+          Write-Host "Building frontend Docker image..."
           docker build -t cloudnativeapplicationcurse-frontend:ci-build ./frontend
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Frontend build failed"
+            Write-Error "Frontend build failed"
             exit 1
           }
-          Write-Host "✅ Frontend image built successfully"
+          Write-Host "Frontend image built successfully"
         
       - name: List Docker images
         shell: powershell
         run: |
-          Write-Host "📦 Built images:"
+          Write-Host "Built images:"
           docker images | Select-String 'ci-build'
 
   test:
@@ -113,56 +113,56 @@ jobs:
       - name: Start services with docker-compose.ci.yaml
         shell: powershell
         run: |
-          Write-Host "🚀 Starting services for smoke tests..."
+          Write-Host "Starting services for smoke tests..."
           docker compose -f docker-compose.ci.yaml up -d
           
       - name: Wait for services to be healthy
         shell: powershell
         run: |
-          Write-Host "⏳ Waiting for services to be healthy..."
+          Write-Host "Waiting for services to be healthy..."
           Start-Sleep -Seconds 15
           
       - name: Test backend /health endpoint
         shell: powershell
         run: |
-          Write-Host "🔍 Testing /health endpoint..."
+          Write-Host "Testing /health endpoint..."
           $response = docker compose -f docker-compose.ci.yaml exec -T backend wget -O- http://localhost:3000/health
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Health check failed"
+            Write-Error "Health check failed"
             exit 1
           }
-          Write-Host "✅ Health endpoint OK: $response"
+          Write-Host "Health endpoint OK: $response"
           
       - name: Test backend /whoami endpoint
         shell: powershell
         run: |
-          Write-Host "🔍 Testing /whoami endpoint..."
+          Write-Host "Testing /whoami endpoint..."
           $response = docker compose -f docker-compose.ci.yaml exec -T backend wget -O- http://localhost:3000/whoami
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Whoami check failed"
+            Write-Error "Whoami check failed"
             exit 1
           }
-          Write-Host "✅ Whoami endpoint OK"
+          Write-Host "Whoami endpoint OK"
           
       - name: Verify all services are healthy
         shell: powershell
         run: |
-          Write-Host "🔍 Checking services health status..."
+          Write-Host "Checking services health status..."
           $unhealthy = docker compose -f docker-compose.ci.yaml ps --format json | ConvertFrom-Json | Where-Object { $_.Health -eq "unhealthy" }
           if ($unhealthy) {
-            Write-Error "❌ Some services are unhealthy"
+            Write-Error "Some services are unhealthy"
             docker compose -f docker-compose.ci.yaml ps
             exit 1
           }
-          Write-Host "✅ All services are healthy"
+          Write-Host "All services are healthy"
           
       - name: Stop and cleanup services
         if: always()
         shell: powershell
         run: |
-          Write-Host "🧹 Stopping services..."
+          Write-Host "Stopping services..."
           docker compose -f docker-compose.ci.yaml down -v
-          Write-Host "✅ Cleanup complete"
+          Write-Host "Cleanup complete"
 
   publish:
     name: Publish Images to GHCR
@@ -177,13 +177,13 @@ jobs:
       - name: Login to GitHub Container Registry
         shell: powershell
         run: |
-          Write-Host "🔑 Logging in to GHCR..."
+          Write-Host "Logging in to GHCR..."
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ GHCR login failed"
+            Write-Error "GHCR login failed"
             exit 1
           }
-          Write-Host "✅ Logged in to GHCR"
+          Write-Host "Logged in to GHCR"
         
       - name: Tag and push backend image
         shell: powershell
@@ -191,24 +191,24 @@ jobs:
           $sha = "${{ github.sha }}".Substring(0, 7)
           $username = "${{ github.repository_owner }}".ToLower()
           
-          Write-Host "📦 Tagging backend image with SHA: $sha"
+          Write-Host "Tagging backend image with SHA: $sha"
           docker tag cloudnativeapplicationcurse-backend:ci-build ghcr.io/$username/gym-backend:$sha
           
-          Write-Host "⬆️ Pushing backend:$sha..."
+          Write-Host "Pushing backend:$sha..."
           docker push ghcr.io/$username/gym-backend:$sha
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Backend push failed"
+            Write-Error "Backend push failed"
             exit 1
           }
           
           if ("${{ github.ref }}" -eq "refs/heads/main") {
-            Write-Host "📦 Tagging backend as latest..."
+            Write-Host "Tagging backend as latest..."
             docker tag cloudnativeapplicationcurse-backend:ci-build ghcr.io/$username/gym-backend:latest
             docker push ghcr.io/$username/gym-backend:latest
-            Write-Host "✅ Backend:latest pushed"
+            Write-Host "Backend:latest pushed"
           }
           
-          Write-Host "✅ Backend image published"
+          Write-Host "Backend image published"
         
       - name: Tag and push frontend image
         shell: powershell
@@ -216,31 +216,31 @@ jobs:
           $sha = "${{ github.sha }}".Substring(0, 7)
           $username = "${{ github.repository_owner }}".ToLower()
           
-          Write-Host "📦 Tagging frontend image with SHA: $sha"
+          Write-Host "Tagging frontend image with SHA: $sha"
           docker tag cloudnativeapplicationcurse-frontend:ci-build ghcr.io/$username/gym-frontend:$sha
           
-          Write-Host "⬆️ Pushing frontend:$sha..."
+          Write-Host "Pushing frontend:$sha..."
           docker push ghcr.io/$username/gym-frontend:$sha
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Frontend push failed"
+            Write-Error "Frontend push failed"
             exit 1
           }
           
           if ("${{ github.ref }}" -eq "refs/heads/main") {
-            Write-Host "📦 Tagging frontend as latest..."
+            Write-Host "Tagging frontend as latest..."
             docker tag cloudnativeapplicationcurse-frontend:ci-build ghcr.io/$username/gym-frontend:latest
             docker push ghcr.io/$username/gym-frontend:latest
-            Write-Host "✅ Frontend:latest pushed"
+            Write-Host "Frontend:latest pushed"
           }
           
-          Write-Host "✅ Frontend image published"
+          Write-Host "Frontend image published"
         
       - name: Logout from GHCR
         if: always()
         shell: powershell
         run: |
           docker logout ghcr.io
-          Write-Host "👋 Logged out from GHCR"
+          Write-Host "Logged out from GHCR"
 
   # sonarcloud:
   #   name: SonarCloud Scan & Quality Gate
@@ -279,7 +279,7 @@ jobs:
           $testResult = "${{ needs.test.result }}"
           $smokeResult = "${{ needs.smoke-tests.result }}"
           
-          Write-Host "📊 Pipeline Results:"
+          Write-Host "Pipeline Results:"
           Write-Host "  Lint: $lintResult"
           Write-Host "  Build: $buildResult"
           Write-Host "  Test: $testResult"
@@ -287,9 +287,9 @@ jobs:
           
           if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success" -or $smokeResult -ne "success") {
             Write-Host ""
-            Write-Host "❌ Quality Gate FAILED - One or more jobs failed"
+            Write-Host "Quality Gate FAILED - One or more jobs failed"
             exit 1
           } else {
             Write-Host ""
-            Write-Host "✅ Quality Gate PASSED - All checks successful"
+            Write-Host "Quality Gate PASSED - All checks successful"
           }
