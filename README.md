@@ -1,5 +1,16 @@
 # Gym Management System
 
+[![CI Pipeline](https://github.com/Lorisj73/CloudNativeApplicationCurse/actions/workflows/ci.yml/badge.svg)](https://github.com/Lorisj73/CloudNativeApplicationCurse/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Lorisj73_CloudNativeApplicationCurse)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+
+
+
+
 A complete fullstack gym management application built with modern web technologies.
 
 ## Features
@@ -43,6 +54,48 @@ A complete fullstack gym management application built with modern web technologi
 - **Docker Compose** for orchestration
 - **PostgreSQL** database
 - **Nginx** for frontend serving
+- **GitHub Actions** for CI/CD
+- **SonarCloud** for code quality analysis
+
+## CI/CD Pipeline
+
+### Pipeline Overview
+
+```mermaid
+graph LR
+    A[Push/PR] --> B[Lint]
+    B --> C[Build]
+    B --> D[Test]
+    D --> E[SonarCloud]
+    C --> F[Quality Gate]
+    E --> F
+    F --> G{All Pass?}
+    G -->|Yes| H[✅ Merge Allowed]
+    G -->|No| I[❌ Blocked]
+```
+
+### Pipeline Jobs
+
+| Job | Description | Runs On |
+|-----|-------------|---------|
+| **Lint** | ESLint on frontend & backend | self-hosted |
+| **Build** | Build frontend & backend | self-hosted |
+| **Test** | Backend tests with PostgreSQL | self-hosted |
+| **SonarCloud** | Code quality & security analysis | self-hosted |
+| **Quality Gate** | Verify all checks pass | self-hosted |
+
+### Workflow Triggers
+
+- **Pull Requests** to `develop` or `main`
+- **Push** to `develop` or `main`
+
+### Quality Requirements
+
+All PRs must pass:
+- ✅ Linting (no errors)
+- ✅ Build (successful compilation)
+- ✅ Tests (all tests passing)
+- ✅ SonarCloud Quality Gate
 
 ## Quick Start
 
@@ -223,13 +276,75 @@ docker exec -it gym_db psql -U postgres -d gym_management
 - Monthly billing with no-show penalties
 - Recent booking history
 
+## Git Workflow
+
+### Branch Strategy
+
+- **Main Branches**:
+  - `main` - Production-ready code
+  - `develop` - Integration branch for features
+
+- **Feature Branches**:
+  - `feature/<feature-name>` - New features and improvements
+  - Example: `feature/user-authentication`, `feature/booking-system`
+
+### Branch Rules
+
+- ❌ No direct commits to `main` or `develop`
+- ✅ All changes must go through Pull Requests to `develop`
+- ✅ Feature branches must be created from `develop`
+- ✅ PRs require review before merging
+
+### Commit Convention
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) specification.
+
+**Format**: `<type>: <description>`
+
+**Types**:
+- `feat`: New feature
+- `fix`: Bug fix
+- `chore`: Maintenance tasks (dependencies, config)
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, missing semi-colons)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `perf`: Performance improvements
+
+**Examples**:
+```bash
+feat: add user authentication system
+fix: correct Postgres connection issue
+chore: update NestJS dependencies
+docs: improve API documentation
+```
+
+### Git Hooks
+
+This project uses [Husky](https://typicar.com/husky) for Git hooks:
+
+- **`pre-commit`**: Runs linting on frontend and backend code
+  - Executes: `npm run lint:all`
+  - Ensures code quality before commit
+
+- **`commit-msg`**: Validates commit messages with commitlint
+  - Enforces conventional commit format
+  - Rejects non-compliant commit messages
+
+**Setup**:
+```bash
+npm install
+npm run prepare
+```
+
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch from `develop`: `git checkout -b feature/my-feature develop`
+3. Make your changes following the commit convention
+4. Ensure all hooks pass (linting and commit message validation)
+5. Push your branch and submit a Pull Request to `develop`
+6. Wait for code review and approval
 
 ## License
 

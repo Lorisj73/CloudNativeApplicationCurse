@@ -2,11 +2,17 @@
   <div class="dashboard">
     <h1>🎯 Dashboard</h1>
     
-    <div v-if="loading" class="alert alert-info">
+    <div
+      v-if="loading"
+      class="alert alert-info"
+    >
       Chargement de votre dashboard...
     </div>
     
-    <div v-if="error" class="alert alert-error">
+    <div
+      v-if="error"
+      class="alert alert-error"
+    >
       {{ error }}
     </div>
     
@@ -19,13 +25,17 @@
       </div>
       
       <!-- Subscription Info -->
-      <div v-if="dashboard.subscription" class="subscription-info card">
+      <div
+        v-if="dashboard.subscription"
+        class="subscription-info card"
+      >
         <h3>💳 Mon Abonnement</h3>
         <div class="subscription-details">
           <p><strong>Plan:</strong> {{ dashboard.subscription.planType }}</p>
           <p><strong>Début:</strong> {{ formatDate(dashboard.subscription.startDate) }}</p>
           <p><strong>Fin:</strong> {{ formatDate(dashboard.subscription.endDate) }}</p>
-          <p><strong>Statut:</strong> 
+          <p>
+            <strong>Statut:</strong> 
             <span :class="dashboard.subscription.active ? 'status-confirmed' : 'status-cancelled'">
               {{ dashboard.subscription.active ? 'Actif' : 'Inactif' }}
             </span>
@@ -34,27 +44,46 @@
         </div>
       </div>
       
-      <div v-else class="alert alert-info">
+      <div
+        v-else
+        class="alert alert-info"
+      >
         ⚠️ Vous n'avez pas d'abonnement actif.
       </div>
       
       <!-- Stats -->
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-number">{{ dashboard.stats.totalClasses }}</div>
-          <div class="stat-label">Cours réservés</div>
+          <div class="stat-number">
+            {{ dashboard.stats.totalClasses }}
+          </div>
+          <div class="stat-label">
+            Cours réservés
+          </div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ dashboard.stats.confirmedClasses }}</div>
-          <div class="stat-label">Cours confirmés</div>
+          <div class="stat-number">
+            {{ dashboard.stats.confirmedClasses }}
+          </div>
+          <div class="stat-label">
+            Cours confirmés
+          </div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ dashboard.stats.totalMinutes }}</div>
-          <div class="stat-label">Minutes d'exercice</div>
+          <div class="stat-number">
+            {{ dashboard.stats.totalMinutes }}
+          </div>
+          <div class="stat-label">
+            Minutes d'exercice
+          </div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ dashboard.stats.noShowClasses }}</div>
-          <div class="stat-label">No-shows ce mois</div>
+          <div class="stat-number">
+            {{ dashboard.stats.noShowClasses }}
+          </div>
+          <div class="stat-label">
+            No-shows ce mois
+          </div>
         </div>
       </div>
       
@@ -70,16 +99,28 @@
       <!-- Available Classes -->
       <div class="classes-section card">
         <h3>📅 Cours disponibles</h3>
-        <div v-if="classesLoading" class="alert alert-info">
+        <div
+          v-if="classesLoading"
+          class="alert alert-info"
+        >
           Chargement des cours...
         </div>
-        <div v-if="classesError" class="alert alert-error">
+        <div
+          v-if="classesError"
+          class="alert alert-error"
+        >
           {{ classesError }}
         </div>
-        <div v-if="availableClasses.length === 0 && !classesLoading" class="alert alert-info">
+        <div
+          v-if="availableClasses.length === 0 && !classesLoading"
+          class="alert alert-info"
+        >
           Aucun cours disponible pour le moment.
         </div>
-        <div v-else class="classes-grid">
+        <div
+          v-else
+          class="classes-grid"
+        >
           <div 
             v-for="classItem in availableClasses" 
             :key="classItem.id"
@@ -95,8 +136,8 @@
               <button 
                 v-if="!isUserBooked(classItem) && !isClassFull(classItem) && !classItem.isCancelled"
                 class="btn btn-success"
-                @click="bookClass(classItem.id)"
                 :disabled="bookingLoading"
+                @click="bookClass(classItem.id)"
               >
                 {{ bookingLoading ? 'Réservation...' : 'Réserver' }}
               </button>
@@ -104,17 +145,23 @@
               <button 
                 v-if="isUserBooked(classItem)"
                 class="btn btn-danger"
-                @click="cancelBooking(getUserBooking(classItem).id)"
                 :disabled="bookingLoading"
+                @click="cancelBooking(getUserBooking(classItem).id)"
               >
                 {{ bookingLoading ? 'Annulation...' : 'Annuler' }}
               </button>
               
-              <span v-if="classItem.isCancelled" class="status-cancelled">
+              <span
+                v-if="classItem.isCancelled"
+                class="status-cancelled"
+              >
                 Cours annulé
               </span>
               
-              <span v-if="isClassFull(classItem) && !isUserBooked(classItem)" class="status-no-show">
+              <span
+                v-if="isClassFull(classItem) && !isUserBooked(classItem)"
+                class="status-no-show"
+              >
                 Complet
               </span>
             </div>
@@ -125,10 +172,16 @@
       <!-- Recent Bookings -->
       <div class="recent-bookings card">
         <h3>📋 Mes dernières réservations</h3>
-        <div v-if="dashboard.recentBookings.length === 0" class="alert alert-info">
+        <div
+          v-if="dashboard.recentBookings.length === 0"
+          class="alert alert-info"
+        >
           Aucune réservation récente.
         </div>
-        <table v-else class="table">
+        <table
+          v-else
+          class="table"
+        >
           <thead>
             <tr>
               <th>Cours</th>
@@ -139,7 +192,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="booking in dashboard.recentBookings" :key="booking.id">
+            <tr
+              v-for="booking in dashboard.recentBookings"
+              :key="booking.id"
+            >
               <td>{{ booking.class.title }}</td>
               <td>{{ booking.class.coach }}</td>
               <td>{{ formatDateTime(booking.class.datetime) }}</td>

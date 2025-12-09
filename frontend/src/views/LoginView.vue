@@ -4,15 +4,24 @@
       <h2>🏋️ Connexion</h2>
       <p>Sélectionnez un utilisateur pour vous connecter (simulation)</p>
       
-      <div v-if="loading" class="alert alert-info">
+      <div
+        v-if="loading"
+        class="alert alert-info"
+      >
         Chargement des utilisateurs...
       </div>
       
-      <div v-if="error" class="alert alert-error">
+      <div
+        v-if="error"
+        class="alert alert-error"
+      >
         {{ error }}
       </div>
       
-      <div v-if="!loading && users.length > 0" class="users-grid">
+      <div
+        v-if="!loading && users.length > 0"
+        class="users-grid"
+      >
         <div 
           v-for="user in users" 
           :key="user.id" 
@@ -22,7 +31,10 @@
           <div class="user-info">
             <h3>{{ user.firstname }} {{ user.lastname }}</h3>
             <p>{{ user.email }}</p>
-            <span class="user-role" :class="user.role.toLowerCase()">
+            <span
+              class="user-role"
+              :class="user.role.toLowerCase()"
+            >
               {{ user.role === 'ADMIN' ? '👑 Admin' : '👤 Utilisateur' }}
             </span>
           </div>
@@ -35,14 +47,18 @@
           <div class="form-group">
             <label for="email">Email :</label>
             <input 
-              type="email" 
               id="email" 
               v-model="email" 
+              type="email" 
               required 
               placeholder="Entrez votre email"
             >
           </div>
-          <button type="submit" class="btn" :disabled="loginLoading">
+          <button
+            type="submit"
+            class="btn"
+            :disabled="loginLoading"
+          >
             {{ loginLoading ? 'Connexion...' : 'Se connecter' }}
           </button>
         </form>
