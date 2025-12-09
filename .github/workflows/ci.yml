@@ -199,87 +199,74 @@ jobs:
 
       - name: Prepare image tags
         id: imgvars
-        shell: bash
+        shell: powershell
         run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          isMain=false
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            isMain=true
-          fi
-          echo "owner=${owner}" >> "$GITHUB_OUTPUT"
-          echo "isMain=${isMain}" >> "$GITHUB_OUTPUT"
+          $owner = "${{ github.repository_owner }}".ToLower()
+          $isMain = "${{ github.ref }}" -eq "refs/heads/main"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "owner=$owner"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "isMain=$isMain"
 
       - name: Build backend image
-        shell: bash
+        shell: powershell
         env:
           OWNER: ${{ steps.imgvars.outputs.owner }}
           IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
         run: |
-          set -euo pipefail
-          sha="${COMMIT_SHA}"
-          backend_tags=("ghcr.io/${OWNER}/project-backend:${sha}")
-          if [ "${IS_MAIN}" = "true" ]; then
-            backend_tags+=("ghcr.io/${OWNER}/project-backend:latest")
-          fi
+          $sha = "$env:COMMIT_SHA"
+          $backendTags = @("ghcr.io/$env:OWNER/project-backend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $backendTags += "ghcr.io/$env:OWNER/project-backend:latest" }
 
-          docker build "${backend_tags[@]/#/-t }" ./backend
-          for tag in "${backend_tags[@]}"; do
-            echo "Built backend tag: ${tag}"
-          done
+          $tagArgs = @()
+          foreach ($tag in $backendTags) { $tagArgs += '-t'; $tagArgs += $tag }
+          docker build @tagArgs ./backend
+
+          foreach ($tag in $backendTags) { Write-Host "Built backend tag: $tag" }
 
       - name: Build frontend image
-        shell: bash
+        shell: powershell
         env:
           OWNER: ${{ steps.imgvars.outputs.owner }}
           IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
         run: |
-          set -euo pipefail
-          sha="${COMMIT_SHA}"
-          frontend_tags=("ghcr.io/${OWNER}/project-frontend:${sha}")
-          if [ "${IS_MAIN}" = "true" ]; then
-            frontend_tags+=("ghcr.io/${OWNER}/project-frontend:latest")
-          fi
+          $sha = "$env:COMMIT_SHA"
+          $frontendTags = @("ghcr.io/$env:OWNER/project-frontend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $frontendTags += "ghcr.io/$env:OWNER/project-frontend:latest" }
 
-          docker build "${frontend_tags[@]/#/-t }" ./frontend
-          for tag in "${frontend_tags[@]}"; do
-            echo "Built frontend tag: ${tag}"
-          done
+          $tagArgs = @()
+          foreach ($tag in $frontendTags) { $tagArgs += '-t'; $tagArgs += $tag }
+          docker build @tagArgs ./frontend
+
+          foreach ($tag in $frontendTags) { Write-Host "Built frontend tag: $tag" }
 
       - name: Push backend images
-        shell: bash
+        shell: powershell
         env:
           OWNER: ${{ steps.imgvars.outputs.owner }}
           IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
         run: |
-          set -euo pipefail
-          sha="${COMMIT_SHA}"
-          backend_tags=("ghcr.io/${OWNER}/project-backend:${sha}")
-          if [ "${IS_MAIN}" = "true" ]; then
-            backend_tags+=("ghcr.io/${OWNER}/project-backend:latest")
-          fi
+          $sha = "$env:COMMIT_SHA"
+          $backendTags = @("ghcr.io/$env:OWNER/project-backend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $backendTags += "ghcr.io/$env:OWNER/project-backend:latest" }
 
-          for tag in "${backend_tags[@]}"; do
-            echo "Pushing ${tag}"
-            docker push "${tag}"
-          done
+          foreach ($tag in $backendTags) {
+            Write-Host "Pushing $tag"
+            docker push $tag
+          }
 
       - name: Push frontend images
-        shell: bash
+        shell: powershell
         env:
           OWNER: ${{ steps.imgvars.outputs.owner }}
           IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
         run: |
-          set -euo pipefail
-          sha="${COMMIT_SHA}"
-          frontend_tags=("ghcr.io/${OWNER}/project-frontend:${sha}")
-          if [ "${IS_MAIN}" = "true" ]; then
-            frontend_tags+=("ghcr.io/${OWNER}/project-frontend:latest")
-          fi
+          $sha = "$env:COMMIT_SHA"
+          $frontendTags = @("ghcr.io/$env:OWNER/project-frontend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $frontendTags += "ghcr.io/$env:OWNER/project-frontend:latest" }
 
-          for tag in "${frontend_tags[@]}"; do
-            echo "Pushing ${tag}"
-            docker push "${tag}"
-          done
+          foreach ($tag in $frontendTags) {
+            Write-Host "Pushing $tag"
+            docker push $tag
+          }
 
   
 
