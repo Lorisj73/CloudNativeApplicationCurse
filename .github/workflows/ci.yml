@@ -197,13 +197,21 @@ jobs:
           Write-Host "Username: $user"
           Write-Host "Registry: ghcr.io"
           
-          # Login using PAT owner (repository_owner) and CR_PAT secret
+          # Clear any existing creds (ignore failures)
+          docker logout ghcr.io | Out-Null
+
+          # Try login with CR_PAT
           echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u $user --password-stdin
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "GHCR login failed"
-            Write-Host "Please verify CR_PAT secret is correctly set in repository secrets"
+            Write-Host "CR_PAT login failed, trying GITHUB_TOKEN as fallback..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $user --password-stdin
+          }
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "GHCR login failed with both CR_PAT and GITHUB_TOKEN"
             exit 1
           }
+
           Write-Host "Logged in to GHCR successfully"
         
       - name: Tag and push backend image
