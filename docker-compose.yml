@@ -51,6 +51,7 @@ services:
 
   # Backend API
   backend:
+    image: ghcr.io/${GHCR_OWNER:-lorisj73}/project-backend:${TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -83,6 +84,7 @@ services:
 
   # Frontend
   frontend:
+    image: ghcr.io/${GHCR_OWNER:-lorisj73}/project-frontend:${TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
