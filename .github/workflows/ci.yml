@@ -193,7 +193,8 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Logging in to GHCR..."
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          $env:GITHUB_TOKEN = "${{ secrets.GITHUB_TOKEN }}"
+          $env:GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           if ($LASTEXITCODE -ne 0) {
             Write-Error "GHCR login failed"
             exit 1
