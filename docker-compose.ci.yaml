@@ -1,0 +1,50 @@
+services:
+  # PostgreSQL Database for CI
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: gym_admin
+      POSTGRES_PASSWORD: SuperSecurePassword123!
+      POSTGRES_DB: gym_management
+    networks:
+      - ci_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gym_admin -d gym_management"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Backend API
+  backend:
+    image: cloudnativeapplicationcurse-backend:ci-build
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://gym_admin:SuperSecurePassword123!@postgres:5432/gym_management?schema=public"
+      PORT: 3000
+      NODE_ENV: production
+    networks:
+      - ci_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # Frontend
+  frontend:
+    image: cloudnativeapplicationcurse-frontend:ci-build
+    networks:
+      - ci_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+networks:
+  ci_network:
+    driver: bridge
