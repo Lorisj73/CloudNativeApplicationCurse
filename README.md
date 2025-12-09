@@ -10,6 +10,7 @@
 
 
 
+
 A complete fullstack gym management application built with modern web technologies.
 
 ## Features
