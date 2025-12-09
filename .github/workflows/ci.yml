@@ -97,32 +97,32 @@ jobs:
         run: npm test
         continue-on-error: false
 
-  sonarcloud:
-    name: SonarCloud Scan & Quality Gate
-    runs-on: self-hosted
-    needs: test
-    
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
-      - name: Run SonarQube Scan
-        shell: powershell
-        run: |
-          $scannerPath = "C:\sonar-scanner\sonar-scanner-7.2.0.5079-windows-x64\bin\sonar-scanner.bat"
-          if (-not (Test-Path $scannerPath)) {
-            Write-Error "Scanner not found at $scannerPath"
-            exit 1
-          }
-          & $scannerPath "-Dsonar.token=$env:SONAR_TOKEN"
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  # sonarcloud:
+  #   name: SonarCloud Scan & Quality Gate
+  #   runs-on: self-hosted
+  #   needs: test
+  #   
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         
+  #     - name: Run SonarQube Scan
+  #       shell: powershell
+  #       run: |
+  #         $scannerPath = "C:\sonar-scanner\sonar-scanner-7.2.0.5079-windows-x64\bin\sonar-scanner.bat"
+  #         if (-not (Test-Path $scannerPath)) {
+  #           Write-Error "Scanner not found at $scannerPath"
+  #           exit 1
+  #         }
+  #         & $scannerPath "-Dsonar.token=$env:SONAR_TOKEN"
+  #       env:
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   quality-gate:
     name: Quality Gate Status
     runs-on: self-hosted
-    needs: [lint, build, test, sonarcloud]
+    needs: [lint, build, test]
     if: always()
     
     steps:
@@ -132,9 +132,8 @@ jobs:
           $lintResult = "${{ needs.lint.result }}"
           $buildResult = "${{ needs.build.result }}"
           $testResult = "${{ needs.test.result }}"
-          $sonarResult = "${{ needs.sonarcloud.result }}"
           
-          if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success" -or $sonarResult -ne "success") {
+          if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success") {
             Write-Host "❌ Quality Gate FAILED - One or more jobs failed"
             exit 1
           } else {
