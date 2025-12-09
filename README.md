@@ -9,6 +9,7 @@
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
 
 
+
 A complete fullstack gym management application built with modern web technologies.
 
 ## Features
