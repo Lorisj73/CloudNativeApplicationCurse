@@ -196,20 +196,11 @@ jobs:
           Write-Host "Username: ${{ github.actor }}"
           Write-Host "Registry: ghcr.io"
           
-          # Check if token is set
-          if ([string]::IsNullOrEmpty("${{ secrets.CR_PAT }}")) {
-            Write-Error "CR_PAT secret is not set or empty"
-            exit 1
-          }
-          
-          $env:CR_PAT = "${{ secrets.CR_PAT }}"
-          $env:CR_PAT | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # Login using direct token substitution
+          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           if ($LASTEXITCODE -ne 0) {
             Write-Error "GHCR login failed"
-            Write-Host "Please verify:"
-            Write-Host "1. CR_PAT secret is set with a valid GitHub Personal Access Token"
-            Write-Host "2. Token has 'write:packages' scope"
-            Write-Host "3. Token is not expired"
+            Write-Host "Please verify CR_PAT secret is correctly set in repository secrets"
             exit 1
           }
           Write-Host "Logged in to GHCR successfully"
