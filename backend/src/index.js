@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  origin: [process.env.FRONTEND_URL || 'http://localhost:8081', 'http://localhost'],
   credentials: true
 }));
 app.use(express.json());
@@ -32,6 +32,22 @@ app.use('/api/auth', authRoutes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Whoami endpoint for load balancing verification
+app.get('/whoami', (req, res) => {
+  const os = require('os');
+  res.json({
+    hostname: os.hostname(),
+    container_id: os.hostname(),
+    pid: process.pid,
+    uptime: process.uptime(),
+    platform: os.platform(),
+    arch: os.arch(),
+    node_version: process.version,
+    memory_usage: process.memoryUsage(),
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Error handling middleware

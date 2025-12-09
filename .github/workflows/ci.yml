@@ -10,6 +10,10 @@ on:
       - develop
       - main
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   lint:
     name: Lint Frontend & Backend
@@ -42,7 +46,7 @@ jobs:
         run: npm run lint:back
 
   build:
-    name: Build Frontend & Backend
+    name: Build Docker Images
     runs-on: self-hosted
     needs: lint
     
@@ -50,29 +54,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm install
+      - name: Build backend Docker image
+        shell: powershell
+        run: |
+          Write-Host "Building backend Docker image..."
+          docker build -t cloudnativeapplicationcurse-backend:ci-build ./backend
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Backend build failed"
+            exit 1
+          }
+          Write-Host "Backend image built successfully"
         
-      - name: Build frontend
-        working-directory: ./frontend
-        run: npm run build
+      - name: Build frontend Docker image
+        shell: powershell
+        run: |
+          Write-Host "Building frontend Docker image..."
+          docker build -t cloudnativeapplicationcurse-frontend:ci-build ./frontend
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Frontend build failed"
+            exit 1
+          }
+          Write-Host "Frontend image built successfully"
         
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm install
-        
-      - name: Upload frontend build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-          retention-days: 1
+      - name: List Docker images
+        shell: powershell
+        run: |
+          Write-Host "Built images:"
+          docker images | Select-String 'ci-build'
 
   test:
     name: Backend Tests
@@ -96,6 +104,171 @@ jobs:
         working-directory: ./backend
         run: npm test
         continue-on-error: false
+
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: self-hosted
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Start services with docker-compose.ci.yaml
+        shell: powershell
+        run: |
+          Write-Host "Starting services for smoke tests..."
+          docker compose -f docker-compose.ci.yaml up -d
+          
+      - name: Wait for services to be healthy
+        shell: powershell
+        run: |
+          Write-Host "Waiting for services to be healthy..."
+          Start-Sleep -Seconds 15
+          
+      - name: Test backend /health endpoint
+        shell: powershell
+        run: |
+          Write-Host "Testing /health endpoint..."
+          $response = docker compose -f docker-compose.ci.yaml exec -T backend wget -O- http://localhost:3000/health
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Health check failed"
+            exit 1
+          }
+          Write-Host "Health endpoint OK: $response"
+          
+      - name: Test backend /whoami endpoint
+        shell: powershell
+        run: |
+          Write-Host "Testing /whoami endpoint..."
+          $response = docker compose -f docker-compose.ci.yaml exec -T backend wget -O- http://localhost:3000/whoami
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Whoami check failed"
+            exit 1
+          }
+          Write-Host "Whoami endpoint OK"
+          
+      - name: Verify all services are healthy
+        shell: powershell
+        run: |
+          Write-Host "Checking services health status..."
+          docker compose -f docker-compose.ci.yaml ps
+          
+          $services = docker compose -f docker-compose.ci.yaml ps --format json | ConvertFrom-Json
+          $unhealthy = $services | Where-Object { $_.Health -eq "unhealthy" }
+          
+          if ($unhealthy) {
+            Write-Host "Unhealthy services detected:"
+            $unhealthy | ForEach-Object { Write-Host "  - $($_.Name): $($_.Health)" }
+            Write-Host ""
+            Write-Host "Checking logs for unhealthy services..."
+            $unhealthy | ForEach-Object { 
+              Write-Host "=== Logs for $($_.Name) ==="
+              docker compose -f docker-compose.ci.yaml logs --tail=50 $_.Service
+            }
+            Write-Error "Some services are unhealthy"
+            exit 1
+          }
+          Write-Host "All services are healthy"
+          
+      - name: Stop and cleanup services
+        if: always()
+        shell: powershell
+        run: |
+          Write-Host "Stopping services..."
+          docker compose -f docker-compose.ci.yaml down -v
+          Write-Host "Cleanup complete"
+
+  publish:
+    name: Publish Images to GHCR
+    runs-on: self-hosted
+    needs: [lint, build, test, smoke-tests]
+    if: github.event_name == 'push'
+    env:
+      COMMIT_SHA: ${{ github.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT != '' && secrets.CR_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Prepare image tags
+        id: imgvars
+        shell: powershell
+        run: |
+          $owner = "${{ github.repository_owner }}".ToLower()
+          $isMain = "${{ github.ref }}" -eq "refs/heads/main"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "owner=$owner"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "isMain=$isMain"
+
+      - name: Build backend image
+        shell: powershell
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
+        run: |
+          $sha = "$env:COMMIT_SHA"
+          $backendTags = @("ghcr.io/$env:OWNER/project-backend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $backendTags += "ghcr.io/$env:OWNER/project-backend:latest" }
+
+          $tagArgs = @()
+          foreach ($tag in $backendTags) { $tagArgs += '-t'; $tagArgs += $tag }
+          docker build @tagArgs ./backend
+
+          foreach ($tag in $backendTags) { Write-Host "Built backend tag: $tag" }
+
+      - name: Build frontend image
+        shell: powershell
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
+        run: |
+          $sha = "$env:COMMIT_SHA"
+          $frontendTags = @("ghcr.io/$env:OWNER/project-frontend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $frontendTags += "ghcr.io/$env:OWNER/project-frontend:latest" }
+
+          $tagArgs = @()
+          foreach ($tag in $frontendTags) { $tagArgs += '-t'; $tagArgs += $tag }
+          docker build @tagArgs ./frontend
+
+          foreach ($tag in $frontendTags) { Write-Host "Built frontend tag: $tag" }
+
+      - name: Push backend images
+        shell: powershell
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
+        run: |
+          $sha = "$env:COMMIT_SHA"
+          $backendTags = @("ghcr.io/$env:OWNER/project-backend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $backendTags += "ghcr.io/$env:OWNER/project-backend:latest" }
+
+          foreach ($tag in $backendTags) {
+            Write-Host "Pushing $tag"
+            docker push $tag
+          }
+
+      - name: Push frontend images
+        shell: powershell
+        env:
+          OWNER: ${{ steps.imgvars.outputs.owner }}
+          IS_MAIN: ${{ steps.imgvars.outputs.isMain }}
+        run: |
+          $sha = "$env:COMMIT_SHA"
+          $frontendTags = @("ghcr.io/$env:OWNER/project-frontend:$sha")
+          if ($env:IS_MAIN -eq 'True') { $frontendTags += "ghcr.io/$env:OWNER/project-frontend:latest" }
+
+          foreach ($tag in $frontendTags) {
+            Write-Host "Pushing $tag"
+            docker push $tag
+          }
+
+  
 
   # sonarcloud:
   #   name: SonarCloud Scan & Quality Gate
@@ -122,7 +295,7 @@ jobs:
   quality-gate:
     name: Quality Gate Status
     runs-on: self-hosted
-    needs: [lint, build, test]
+    needs: [lint, build, test, smoke-tests]
     if: always()
     
     steps:
@@ -132,10 +305,19 @@ jobs:
           $lintResult = "${{ needs.lint.result }}"
           $buildResult = "${{ needs.build.result }}"
           $testResult = "${{ needs.test.result }}"
+          $smokeResult = "${{ needs.smoke-tests.result }}"
           
-          if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success") {
-            Write-Host "❌ Quality Gate FAILED - One or more jobs failed"
+          Write-Host "Pipeline Results:"
+          Write-Host "  Lint: $lintResult"
+          Write-Host "  Build: $buildResult"
+          Write-Host "  Test: $testResult"
+          Write-Host "  Smoke Tests: $smokeResult"
+          
+          if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success" -or $smokeResult -ne "success") {
+            Write-Host ""
+            Write-Host "Quality Gate FAILED - One or more jobs failed"
             exit 1
           } else {
-            Write-Host "✅ Quality Gate PASSED - All checks successful"
+            Write-Host ""
+            Write-Host "Quality Gate PASSED - All checks successful"
           }
