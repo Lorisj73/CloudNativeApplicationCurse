@@ -148,10 +148,21 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Checking services health status..."
-          $unhealthy = docker compose -f docker-compose.ci.yaml ps --format json | ConvertFrom-Json | Where-Object { $_.Health -eq "unhealthy" }
+          docker compose -f docker-compose.ci.yaml ps
+          
+          $services = docker compose -f docker-compose.ci.yaml ps --format json | ConvertFrom-Json
+          $unhealthy = $services | Where-Object { $_.Health -eq "unhealthy" }
+          
           if ($unhealthy) {
+            Write-Host "Unhealthy services detected:"
+            $unhealthy | ForEach-Object { Write-Host "  - $($_.Name): $($_.Health)" }
+            Write-Host ""
+            Write-Host "Checking logs for unhealthy services..."
+            $unhealthy | ForEach-Object { 
+              Write-Host "=== Logs for $($_.Name) ==="
+              docker compose -f docker-compose.ci.yaml logs --tail=50 $_.Service
+            }
             Write-Error "Some services are unhealthy"
-            docker compose -f docker-compose.ci.yaml ps
             exit 1
           }
           Write-Host "All services are healthy"
