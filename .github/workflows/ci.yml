@@ -196,15 +196,26 @@ jobs:
           $user = "${{ github.repository_owner }}".ToLower()
           Write-Host "Username: $user"
           Write-Host "Registry: ghcr.io"
+
+          # Validate secrets presence (length only, secret content not shown)
+          $crPat = "${{ secrets.CR_PAT }}"
+          $ghTok = "${{ secrets.GITHUB_TOKEN }}"
+          Write-Host "CR_PAT length: $($crPat.Length)"
+          Write-Host "GITHUB_TOKEN length: $($ghTok.Length)"
+
+          if ([string]::IsNullOrEmpty($crPat)) {
+            Write-Error "CR_PAT is empty or not accessible in this context"
+            exit 1
+          }
           
           # Clear any existing creds (ignore failures)
           docker logout ghcr.io | Out-Null
 
           # Try login with CR_PAT
-          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u $user --password-stdin
+          echo $crPat | docker login ghcr.io -u $user --password-stdin
           if ($LASTEXITCODE -ne 0) {
             Write-Host "CR_PAT login failed, trying GITHUB_TOKEN as fallback..."
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $user --password-stdin
+            echo $ghTok | docker login ghcr.io -u $user --password-stdin
           }
 
           if ($LASTEXITCODE -ne 0) {
