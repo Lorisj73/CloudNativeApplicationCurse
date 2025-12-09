@@ -193,11 +193,12 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Logging in to GHCR..."
-          Write-Host "Username: ${{ github.repository_owner }}"
+          $user = "${{ github.repository_owner }}".ToLower()
+          Write-Host "Username: $user"
           Write-Host "Registry: ghcr.io"
           
           # Login using PAT owner (repository_owner) and CR_PAT secret
-          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u $user --password-stdin
           if ($LASTEXITCODE -ne 0) {
             Write-Error "GHCR login failed"
             Write-Host "Please verify CR_PAT secret is correctly set in repository secrets"
