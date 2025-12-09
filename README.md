@@ -83,11 +83,28 @@ graph LR
 | **Test** | Backend tests with PostgreSQL | self-hosted |
 | **SonarCloud** | Code quality & security analysis | self-hosted |
 | **Quality Gate** | Verify all checks pass | self-hosted |
+| **Deploy** | Pull latest published images and restart stack via compose | self-hosted |
 
 ### Workflow Triggers
 
 - **Pull Requests** to `develop` or `main`
 - **Push** to `develop` or `main`
+
+### 🔄 Déploiement local automatisé
+
+- Le job `deploy` s'exécute automatiquement sur `push` vers `main` après la publication réussie des images (`publish`).
+- Le job appelle `scripts/deploy.ps1` sur le runner self-hosted pour :
+  - `docker compose down` (sans suppression de volumes ni images)
+  - `docker pull` des images GHCR taguées avec le commit (`project-backend:<sha>`, `project-frontend:<sha>`)
+  - `docker compose up -d`
+- Conditions requises :
+  - runner local/self-hosted actif avec Docker
+  - secrets registre (`CR_PAT` ou `GITHUB_TOKEN`) configurés
+  - accès réseau au registre GHCR
+
+Branches actives : le déploiement automatique est **uniquement actif sur la branche `main`**.
+
+Chaîne complète : `lint → build → test → (publish images) → deploy`
 
 ### Quality Requirements
 

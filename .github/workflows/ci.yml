@@ -289,17 +289,12 @@ jobs:
         run: |
           $owner = "${{ github.repository_owner }}".ToLower()
           Add-Content -Path $env:GITHUB_ENV -Value "GHCR_OWNER=$owner"
-          Add-Content -Path $env:GITHUB_ENV -Value "TAG=latest"
+          Add-Content -Path $env:GITHUB_ENV -Value "TAG=${{ github.sha }}"
 
-      - name: Pull images
+      - name: Run deploy script
         shell: powershell
         run: |
-          docker compose -f docker-compose.yml pull backend frontend
-
-      - name: Deploy stack
-        shell: powershell
-        run: |
-          docker compose -f docker-compose.yml up -d --remove-orphans
+          ./scripts/deploy.ps1 -Owner $env:GHCR_OWNER -Tag $env:TAG
 
   
 
