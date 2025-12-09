@@ -1,5 +1,16 @@
 # Gym Management System
 
+[![CI Pipeline](https://github.com/Lorisj73/CloudNativeApplicationCurse/actions/workflows/ci.yml/badge.svg)](https://github.com/Lorisj73/CloudNativeApplicationCurse/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Lorisj73_CloudNativeApplicationCurse)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Lorisj73_CloudNativeApplicationCurse&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Lorisj73_CloudNativeApplicationCurse)
+
+
+
+
 A complete fullstack gym management application built with modern web technologies.
 
 ## Features
@@ -43,6 +54,48 @@ A complete fullstack gym management application built with modern web technologi
 - **Docker Compose** for orchestration
 - **PostgreSQL** database
 - **Nginx** for frontend serving
+- **GitHub Actions** for CI/CD
+- **SonarCloud** for code quality analysis
+
+## CI/CD Pipeline
+
+### Pipeline Overview
+
+```mermaid
+graph LR
+    A[Push/PR] --> B[Lint]
+    B --> C[Build]
+    B --> D[Test]
+    D --> E[SonarCloud]
+    C --> F[Quality Gate]
+    E --> F
+    F --> G{All Pass?}
+    G -->|Yes| H[✅ Merge Allowed]
+    G -->|No| I[❌ Blocked]
+```
+
+### Pipeline Jobs
+
+| Job | Description | Runs On |
+|-----|-------------|---------|
+| **Lint** | ESLint on frontend & backend | self-hosted |
+| **Build** | Build frontend & backend | self-hosted |
+| **Test** | Backend tests with PostgreSQL | self-hosted |
+| **SonarCloud** | Code quality & security analysis | self-hosted |
+| **Quality Gate** | Verify all checks pass | self-hosted |
+
+### Workflow Triggers
+
+- **Pull Requests** to `develop` or `main`
+- **Push** to `develop` or `main`
+
+### Quality Requirements
+
+All PRs must pass:
+- ✅ Linting (no errors)
+- ✅ Build (successful compilation)
+- ✅ Tests (all tests passing)
+- ✅ SonarCloud Quality Gate
 
 ## Quick Start
 
@@ -300,3 +353,214 @@ This project is licensed under the MIT License.
 ## Support
 
 For support or questions, please open an issue in the repository.
+
+---
+
+## TP 1.6 - Mise à l'échelle du Backend (Scaling)
+
+### Objectif
+Démontrer la capacité de mise à l'échelle horizontale du backend en lançant plusieurs instances et en vérifiant la répartition de charge.
+
+### Implémentation
+
+#### 1. Route `/whoami` pour identification des instances
+
+Ajout d'un endpoint dans `backend/src/index.js` qui retourne les informations de l'instance :
+
+```javascript
+app.get('/whoami', (req, res) => {
+  res.json({
+    hostname: os.hostname(),
+    container_id: os.hostname(),
+    pid: process.pid,
+    uptime: process.uptime(),
+    platform: os.platform(),
+    arch: os.arch(),
+    node_version: process.version,
+    memory_usage: process.memoryUsage(),
+    timestamp: new Date().toISOString()
+  });
+});
+```
+
+Cette route permet d'identifier de manière unique chaque instance grâce au **hostname** (ID du conteneur) et au **PID**.
+
+#### 2. Modification de `docker-compose.yml`
+
+Pour permettre la mise à l'échelle, le paramètre `container_name` a été **supprimé** du service backend :
+
+```yaml
+backend:
+  build:
+    context: ./backend
+  # container_name: gym-backend  ← SUPPRIMÉ pour permettre le scaling
+  environment:
+    DATABASE_URL: ${DATABASE_URL}
+    NODE_ENV: ${NODE_ENV:-production}
+  networks:
+    - back_network
+```
+
+#### 3. Lancement avec 3 instances
+
+```bash
+docker compose up -d --build --scale backend=3
+```
+
+Cette commande :
+- Reconstruit les images si nécessaire
+- Lance 3 instances du service backend
+- Docker Compose génère automatiquement des noms uniques : 
+  - `cloudnativeapplicationcurse-backend-1`
+  - `cloudnativeapplicationcurse-backend-2`
+  - `cloudnativeapplicationcurse-backend-3`
+
+#### 4. Vérification du scaling
+
+**Liste des conteneurs**
+```bash
+docker compose ps
+```
+
+Résultat :
+```
+NAME                                    STATUS
+cloudnativeapplicationcurse-backend-1   Up (healthy)
+cloudnativeapplicationcurse-backend-2   Up (healthy)
+cloudnativeapplicationcurse-backend-3   Up (healthy)
+```
+
+**Adresses IP des instances**
+```bash
+docker inspect cloudnativeapplicationcurse-backend-1 cloudnativeapplicationcurse-backend-2 cloudnativeapplicationcurse-backend-3 --format '{{.Name}} - IP: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+```
+
+Résultat :
+```
+/cloudnativeapplicationcurse-backend-1 - IP: 172.19.0.5
+/cloudnativeapplicationcurse-backend-2 - IP: 172.19.0.4
+/cloudnativeapplicationcurse-backend-3 - IP: 172.19.0.6
+```
+
+#### 5. Test du Load Balancing
+
+**Test manuel des instances individuelles**
+
+Test direct sur chaque instance via son IP :
+
+```bash
+# Backend 1
+docker run --rm --network gym_back_network curlimages/curl:latest http://172.19.0.5:3000/whoami
+
+# Backend 2
+docker run --rm --network gym_back_network curlimages/curl:latest http://172.19.0.4:3000/whoami
+
+# Backend 3
+docker run --rm --network gym_back_network curlimages/curl:latest http://172.19.0.6:3000/whoami
+```
+
+Chaque instance retourne un **hostname unique** correspondant à son container ID.
+
+**Test de la répartition de charge via DNS**
+
+Docker Compose crée automatiquement un DNS pour le service `backend` qui répartit les requêtes entre les instances :
+
+```bash
+# Script PowerShell pour tester 15 requêtes
+for ($i=1; $i -le 15; $i++) {
+    docker run --rm --network gym_back_network curlimages/curl:latest -s http://backend:3000/whoami | ConvertFrom-Json | Select-Object -ExpandProperty hostname
+}
+```
+
+**Script de test automatisé**
+
+Un script PowerShell `test-load-balancing.ps1` a été créé pour automatiser les tests :
+
+```bash
+.\test-load-balancing.ps1
+```
+
+**Résultats du test (15 requêtes) :**
+
+| Instance (hostname) | Nombre de requêtes | Pourcentage |
+|---------------------|-------------------|-------------|
+| ade4658be4a3        | 6                 | 40%         |
+| 09e4deaa28dc        | 7                 | 46.67%      |
+| d7eb9c636514        | 2                 | 13.33%      |
+
+✅ **Les 3 instances reçoivent des requêtes**, confirmant le load balancing DNS de Docker.
+
+### Architecture de Load Balancing
+
+```
+                    ┌─────────────────┐
+                    │   DNS Service   │
+                    │    "backend"    │
+                    └────────┬────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+    ┌────▼────┐         ┌────▼────┐        ┌────▼────┐
+    │Backend-1│         │Backend-2│        │Backend-3│
+    │ :3000   │         │ :3000   │        │ :3000   │
+    └─────────┘         └─────────┘        └─────────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             │
+                      ┌──────▼──────┐
+                      │  PostgreSQL │
+                      │    :5432    │
+                      └─────────────┘
+```
+
+### Points clés du TP 1.6
+
+✅ **Backend stateless** : Aucune donnée d'état stockée dans le conteneur, toutes les données persistantes sont dans PostgreSQL
+
+✅ **Scalabilité horizontale** : Possibilité de lancer N instances avec `--scale backend=N`
+
+✅ **Load Balancing automatique** : Le DNS interne de Docker (`backend:3000`) répartit automatiquement les requêtes
+
+✅ **Health checks** : Chaque instance est surveillée et marquée `healthy` avant de recevoir du trafic
+
+✅ **Isolation réseau** : Les instances backend partagent le réseau `back_network` avec PostgreSQL
+
+### Commandes utiles pour le scaling
+
+```bash
+# Lancer avec N instances
+docker compose up -d --scale backend=N
+
+# Réduire le nombre d'instances (ex: 2)
+docker compose up -d --scale backend=2
+
+# Voir les logs de toutes les instances backend
+docker compose logs -f backend
+
+# Voir les logs d'une instance spécifique
+docker logs -f cloudnativeapplicationcurse-backend-1
+
+# Statistiques en temps réel
+docker stats
+
+# Arrêter tout
+docker compose down
+```
+
+### Limitations identifiées
+
+⚠️ **Traefik sur Windows Docker Desktop** : Le provider Docker de Traefik ne fonctionne pas correctement sur Windows Docker Desktop. Le load balancing via Traefik (`http://localhost/api/whoami`) retourne une erreur 404. 
+
+**Solution de contournement** : 
+- Utiliser le DNS interne de Docker (`backend:3000`) 
+- Ou tester sur un environnement Linux/WSL2 pour Traefik
+
+### Conclusion du TP 1.6
+
+Le TP 1.6 démontre avec succès :
+- La **mise à l'échelle horizontale** du backend (3 instances simultanées)
+- La **répartition de charge automatique** via le DNS de Docker
+- L'architecture **cloud-native** avec backend stateless
+- La **résilience** grâce aux health checks
+
+Le backend est maintenant prêt pour un déploiement en production avec gestion dynamique de la charge !

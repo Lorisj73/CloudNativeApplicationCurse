@@ -34,6 +34,22 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Whoami endpoint for load balancing verification
+app.get('/whoami', (req, res) => {
+  const os = require('os');
+  res.json({
+    hostname: os.hostname(),
+    container_id: os.hostname(),
+    pid: process.pid,
+    uptime: process.uptime(),
+    platform: os.platform(),
+    arch: os.arch(),
+    node_version: process.version,
+    memory_usage: process.memoryUsage(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
