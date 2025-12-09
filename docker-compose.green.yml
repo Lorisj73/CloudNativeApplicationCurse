@@ -1,0 +1,33 @@
+services:
+  app-back-green:
+    image: ghcr.io/${GHCR_OWNER:-lorisj73}/project-backend:${TAG_GREEN:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://gym_admin:SuperSecurePassword123!@postgres:5432/gym_management?schema=public"
+      PORT: 3000
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - back_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  app-front-green:
+    image: ghcr.io/${GHCR_OWNER:-lorisj73}/project-frontend:${TAG_GREEN:-latest}
+    restart: unless-stopped
+    depends_on:
+      app-back-green:
+        condition: service_started
+    networks:
+      - front_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
