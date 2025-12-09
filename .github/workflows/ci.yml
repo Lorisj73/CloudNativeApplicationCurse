@@ -101,6 +101,69 @@ jobs:
         run: npm test
         continue-on-error: false
 
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: self-hosted
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Start services with docker-compose.ci.yaml
+        shell: powershell
+        run: |
+          Write-Host "🚀 Starting services for smoke tests..."
+          docker compose -f docker-compose.ci.yaml up -d
+          
+      - name: Wait for services to be healthy
+        shell: powershell
+        run: |
+          Write-Host "⏳ Waiting for services to be healthy..."
+          Start-Sleep -Seconds 15
+          
+      - name: Test backend /health endpoint
+        shell: powershell
+        run: |
+          Write-Host "🔍 Testing /health endpoint..."
+          $response = docker compose -f docker-compose.ci.yaml exec -T backend wget -O- http://localhost:3000/health
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "❌ Health check failed"
+            exit 1
+          }
+          Write-Host "✅ Health endpoint OK: $response"
+          
+      - name: Test backend /whoami endpoint
+        shell: powershell
+        run: |
+          Write-Host "🔍 Testing /whoami endpoint..."
+          $response = docker compose -f docker-compose.ci.yaml exec -T backend wget -O- http://localhost:3000/whoami
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "❌ Whoami check failed"
+            exit 1
+          }
+          Write-Host "✅ Whoami endpoint OK"
+          
+      - name: Verify all services are healthy
+        shell: powershell
+        run: |
+          Write-Host "🔍 Checking services health status..."
+          $unhealthy = docker compose -f docker-compose.ci.yaml ps --format json | ConvertFrom-Json | Where-Object { $_.Health -eq "unhealthy" }
+          if ($unhealthy) {
+            Write-Error "❌ Some services are unhealthy"
+            docker compose -f docker-compose.ci.yaml ps
+            exit 1
+          }
+          Write-Host "✅ All services are healthy"
+          
+      - name: Stop and cleanup services
+        if: always()
+        shell: powershell
+        run: |
+          Write-Host "🧹 Stopping services..."
+          docker compose -f docker-compose.ci.yaml down -v
+          Write-Host "✅ Cleanup complete"
+
   # sonarcloud:
   #   name: SonarCloud Scan & Quality Gate
   #   runs-on: self-hosted
@@ -126,7 +189,7 @@ jobs:
   quality-gate:
     name: Quality Gate Status
     runs-on: self-hosted
-    needs: [lint, build, test]
+    needs: [lint, build, test, smoke-tests]
     if: always()
     
     steps:
@@ -136,9 +199,14 @@ jobs:
           $lintResult = "${{ needs.lint.result }}"
           $buildResult = "${{ needs.build.result }}"
           $testResult = "${{ needs.test.result }}"
+          $smokeResult = "${{ needs.smoke-tests.result }}"
           
-          if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success") {
+          if ($lintResult -ne "success" -or $buildResult -ne "success" -or $testResult -ne "success" -or $smokeResult -ne "success") {
             Write-Host "❌ Quality Gate FAILED - One or more jobs failed"
+            Write-Host "  Lint: $lintResult"
+            Write-Host "  Build: $buildResult"
+            Write-Host "  Test: $testResult"
+            Write-Host "  Smoke Tests: $smokeResult"
             exit 1
           } else {
             Write-Host "✅ Quality Gate PASSED - All checks successful"
