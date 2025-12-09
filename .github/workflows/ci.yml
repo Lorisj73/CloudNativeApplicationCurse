@@ -42,7 +42,7 @@ jobs:
         run: npm run lint:back
 
   build:
-    name: Build Frontend & Backend
+    name: Build Docker Images
     runs-on: self-hosted
     needs: lint
     
@@ -50,29 +50,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm install
+      - name: Build backend Docker image
+        shell: powershell
+        run: |
+          Write-Host "🐳 Building backend Docker image..."
+          docker build -t cloudnativeapplicationcurse-backend:ci-build ./backend
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "❌ Backend build failed"
+            exit 1
+          }
+          Write-Host "✅ Backend image built successfully"
         
-      - name: Build frontend
-        working-directory: ./frontend
-        run: npm run build
+      - name: Build frontend Docker image
+        shell: powershell
+        run: |
+          Write-Host "🐳 Building frontend Docker image..."
+          docker build -t cloudnativeapplicationcurse-frontend:ci-build ./frontend
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "❌ Frontend build failed"
+            exit 1
+          }
+          Write-Host "✅ Frontend image built successfully"
         
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm install
-        
-      - name: Upload frontend build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-          retention-days: 1
+      - name: List Docker images
+        shell: powershell
+        run: |
+          Write-Host "📦 Built images:"
+          docker images | Select-String "ci-build"
 
   test:
     name: Backend Tests
