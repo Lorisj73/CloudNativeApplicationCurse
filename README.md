@@ -180,6 +180,34 @@ TAG_GREEN=<nouveau_tag> docker compose -f docker-compose.base.yml -f docker-comp
 - Sur le runner self-hosted, ce job applique la séquence décrite ci-dessus : il déploie d’abord la couleur inactive avec les images GHCR taguées par le commit, puis met à jour l’include Nginx et recharge le proxy.
 - Le rollback se limite à remettre l’ancienne couleur comme active, ce qui respecte l’exigence “déployer sans couper et revenir quasi instantanément”.
 
+## 📡 Monitoring & Observabilité
+
+Une stack complète (Prometheus + Grafana + Loki + Promtail + cAdvisor) vit dans [docker-compose.monitoring.yml](docker-compose.monitoring.yml). Les objectifs détaillés sont décrits dans [MONITORING.md](MONITORING.md).
+
+### Stack à lancer en local
+
+```bash
+# Démarrer les services de monitoring
+docker compose -f docker-compose.monitoring.yml up -d
+
+# Arrêter la stack et supprimer les volumes
+docker compose -f docker-compose.monitoring.yml down -v
+```
+
+| Service | Rôle | URL |
+|---------|------|-----|
+| Prometheus | Scrape des métriques backend + cAdvisor | http://localhost:9090 |
+| Grafana | Dashboards pré-provisionnés (login admin/admin) | http://localhost:3000 |
+| Loki | Stockage des logs (exposé uniquement au réseau Docker) | interne 3100 |
+| Promtail | Collecte des logs Docker (stdout) et envoi vers Loki | http://localhost:9080/targets |
+| cAdvisor | Métriques conteneurs Docker | http://localhost:8080 |
+
+Les fichiers de configuration sont versionnés dans `monitoring/` (Prometheus, Loki, Promtail, provisioning Grafana + dashboards JSON). Grafana charge automatiquement deux dashboards :
+- **Gym Backend Metrics** : requêtes/s, latence (p95), erreurs, CPU container, uptime.
+- **Gym Logs Overview** : stream temps réel, répartition par niveau, corrélation latence / erreurs.
+
+> ℹ️ **Compat Windows / Docker Desktop** : la stack suppose l’accès aux chemins Linux (`/var/run/docker.sock`, `/var/lib/docker/containers`, `/:/rootfs`). Utiliser WSL2 ou adapter les volumes vers les équivalents Windows (`\\.\pipe\docker_engine`).
+
 ## Quick Start
 
 ### Prerequisites
@@ -200,6 +228,13 @@ TAG_GREEN=<nouveau_tag> docker compose -f docker-compose.base.yml -f docker-comp
    ```
    
    Edit `.env` file if needed (default values should work for development).
+  When you run the frontend in Vite mode (`npm run dev`), expose the local API via:
+  ```bash
+  cd frontend
+  cp .env.example .env
+  # leave VITE_API_BASE_URL=http://localhost:3000/api
+  ```
+  For Docker builds + reverse proxy, this variable can be omitted: the app automatically uses `/api` and avoids CORS errors.
 
 3. **Start the application**
    ```bash

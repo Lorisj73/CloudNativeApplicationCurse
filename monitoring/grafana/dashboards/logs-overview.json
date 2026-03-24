@@ -1,0 +1,74 @@
+{
+  "id": null,
+  "uid": "gym-logs",
+  "title": "Gym Logs Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 10,
+      "type": "logs",
+      "title": "Backend Logs Stream",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 10},
+      "options": {
+        "dedupStrategy": "none",
+        "showLabels": true,
+        "showLineNumbers": false
+      },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{container=~\".*app-back.*\"} |~ \".*\""
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Errors per Minute",
+      "gridPos": {"x": 0, "y": 10, "w": 8, "h": 6},
+      "datasource": "Loki",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate({container=~\".*app-back.*\", level=~\"error|ERROR\"}[1m]))"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "id": 12,
+      "type": "piechart",
+      "title": "Logs by Level",
+      "gridPos": {"x": 8, "y": 10, "w": 8, "h": 6},
+      "datasource": "Loki",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (level) (count_over_time({container=~\".*app-back.*\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Latency + Errors",
+      "gridPos": {"x": 16, "y": 10, "w": 8, "h": 6},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.9, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m]))"
+        }
+      ]
+    }
+  ]
+}

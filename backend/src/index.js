@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const logger = require('./logger');
 const requestLogger = require('./middleware/requestLogger');
+const { metricsMiddleware, initMetrics, register: metricsRegister } = require('./observability/metrics');
 
 const userRoutes = require('./routes/userRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
@@ -16,6 +17,8 @@ const authRoutes = require('./routes/authRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+initMetrics();
+
 // Middleware
 app.use(cors({
   origin: [process.env.FRONTEND_URL || 'http://localhost:8081', 'http://localhost'],
@@ -24,6 +27,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
+app.use(metricsMiddleware);
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -51,6 +55,18 @@ app.get('/whoami', (req, res) => {
     memory_usage: process.memoryUsage(),
     timestamp: new Date().toISOString()
   });
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', metricsRegister.contentType);
+    const metricsPayload = await metricsRegister.metrics();
+    res.send(metricsPayload);
+  } catch (error) {
+    logger.error({ msg: 'metrics_error', error: error.message });
+    res.status(500).send('Unable to collect metrics');
+  }
 });
 
 // Error handling middleware

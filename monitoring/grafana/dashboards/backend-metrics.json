@@ -1,0 +1,140 @@
+{
+  "id": null,
+  "uid": "gym-backend-metrics",
+  "title": "Gym Backend Metrics",
+  "tags": ["gym", "backend"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "style": "dark",
+  "templating": {
+    "list": [
+      {
+        "name": "color",
+        "query": "label_values(http_requests_total, color)",
+        "datasource": "Prometheus",
+        "type": "query",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": [".*"]
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "HTTP Requests /s",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 6},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{color=~\"$color\"}[1m]))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Latency (p95)",
+      "gridPos": {"x": 6, "y": 0, "w": 10, "h": 6},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{color=~\"$color\"}[5m])) by (le))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Error Rate (5xx)",
+      "gridPos": {"x": 0, "y": 6, "w": 8, "h": 6},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\", color=~\"$color\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "reds"}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Active Requests",
+      "gridPos": {"x": 8, "y": 6, "w": 8, "h": 6},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "http_active_requests",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Container CPU (cadvisor)",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (container_label_com_docker_compose_service) (rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service=~\"app-back-.*\"}[2m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Uptime",
+      "gridPos": {"x": 12, "y": 12, "w": 4, "h": 8},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "max(process_start_time_seconds)",
+          "refId": "A"
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      }
+    }
+  ]
+}
