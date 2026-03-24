@@ -83,11 +83,28 @@ graph LR
 | **Test** | Backend tests with PostgreSQL | self-hosted |
 | **SonarCloud** | Code quality & security analysis | self-hosted |
 | **Quality Gate** | Verify all checks pass | self-hosted |
+| **Deploy** | Pull latest published images and restart stack via compose | self-hosted |
 
 ### Workflow Triggers
 
 - **Pull Requests** to `develop` or `main`
 - **Push** to `develop` or `main`
+
+### 🔄 Déploiement local automatisé
+
+- Le job `deploy` s'exécute automatiquement sur `push` vers `main` après la publication réussie des images (`publish`).
+- Le job appelle `scripts/deploy.ps1` sur le runner self-hosted pour :
+  - `docker compose down` (sans suppression de volumes ni images)
+  - `docker pull` des images GHCR taguées avec le commit (`project-backend:<sha>`, `project-frontend:<sha>`)
+  - `docker compose up -d`
+- Conditions requises :
+  - runner local/self-hosted actif avec Docker
+  - secrets registre (`CR_PAT` ou `GITHUB_TOKEN`) configurés
+  - accès réseau au registre GHCR
+
+Branches actives : le déploiement automatique est **uniquement actif sur la branche `main`**.
+
+Chaîne complète : `lint → build → test → (publish images) → deploy`
 
 ### Quality Requirements
 
@@ -96,6 +113,72 @@ All PRs must pass:
 - ✅ Build (successful compilation)
 - ✅ Tests (all tests passing)
 - ✅ SonarCloud Quality Gate
+
+## 🔵🟢 Déploiement blue/green
+
+### Principe général
+- Deux piles applicatives coexistent : `blue` (souvent en production) et `green` (version candidate). Elles tournent simultanément et partagent la même base PostgreSQL décrite dans [docker-compose.base.yml](docker-compose.base.yml).
+- Le reverse proxy Nginx du service `reverse-proxy` (fichier [reverse-proxy/nginx.conf](reverse-proxy/nginx.conf)) reçoit tout le trafic entrant sur `http://localhost` et relaie les requêtes vers la couleur marquée active.
+- La couleur active est définie dans [reverse-proxy/active-upstream.conf](reverse-proxy/active-upstream.conf) via deux variables (`$active_backend`, `$active_frontend`). Changer ces valeurs + recharger Nginx suffit à basculer sans downtime.
+- Postgres reste unique et persistant (volume `gym_postgres_data`), ce qui rend le rollback instantané puisque l’ancienne couleur n’est jamais arrêtée avant validation.
+
+```
+[Client]
+  |
+  v
+[Reverse Proxy Nginx] --> [app-front-blue] --> [app-back-blue]
+                \-> [app-front-green] -> [app-back-green]
+                        \-> [Postgres partagé]
+```
+
+### Organisation des fichiers Compose
+- [docker-compose.base.yml](docker-compose.base.yml) : services communs (`postgres`, `reverse-proxy`) + réseaux (`gym_front_network`, `gym_back_network`).
+- [docker-compose.blue.yml](docker-compose.blue.yml) : définit `app-back-blue` et `app-front-blue` basés sur les images GHCR taguées via `TAG_BLUE`.
+- [docker-compose.green.yml](docker-compose.green.yml) : même chose pour la pile verte (`TAG_GREEN`).
+- [docker-compose.proxy.yml](docker-compose.proxy.yml) : permet de redémarrer uniquement le proxy si besoin (maintenance, reload isolé).
+
+Déploiement manuel d’une couleur :
+
+```bash
+# Lancer l'infra partagée (à faire une fois)
+docker compose -f docker-compose.base.yml up -d postgres reverse-proxy
+
+# Déployer la pile bleue
+TAG_BLUE=<nouveau_tag> docker compose -f docker-compose.base.yml -f docker-compose.blue.yml up -d
+
+# Déployer la pile verte
+TAG_GREEN=<nouveau_tag> docker compose -f docker-compose.base.yml -f docker-compose.green.yml up -d
+```
+
+### Reverse proxy et bascule
+1. Mettre à jour [reverse-proxy/active-upstream.conf](reverse-proxy/active-upstream.conf) :
+  ```nginx
+  set $active_backend app_back_green;   # ou app_back_blue
+  set $active_frontend app_front_green; # ou app_front_blue
+  ```
+2. Recharger Nginx sans couper le conteneur :
+  ```bash
+  docker exec reverse-proxy nginx -s reload
+  ```
+3. Trafic immédiatement redirigé vers la nouvelle couleur alors que l’ancienne reste disponible pour rollback.
+
+### Scénario de déploiement (CI ou manuel)
+1. **Build & push** : le job `publish` de [.github/workflows/ci.yml](.github/workflows/ci.yml) construit les images backend/frontend et les publie sur GHCR avec le SHA (`project-*-:<sha>`).
+2. **Choix de la cible** : le runner lit `reverse-proxy/active-upstream.conf` pour connaître la couleur active, en déduit la couleur inactive (`blue` ou `green`) et exporte `TAG_BLUE` ou `TAG_GREEN` avec le SHA publié.
+3. **Déploiement de la couleur inactive** : `docker compose -f docker-compose.base.yml -f docker-compose.<inactive>.yml up -d --remove-orphans` met à jour uniquement cette pile. Blue et green peuvent être redéployées indépendamment.
+4. **Vérifications** : healthchecks Compose + smoke tests internes (scripts locaux) valident la pile candidate.
+5. **Bascule proxy** : modification de `active-upstream.conf` vers la nouvelle couleur puis `nginx -s reload`. La bascule est quasi instantanée, l’ancienne couleur reste en running pour rollback.
+6. **Nettoyage optionnel** : une fois la version validée, on peut arrêter l’ancienne pile avec `docker compose -f docker-compose.base.yml -f docker-compose.<ancienne>.yml down` pour libérer des ressources.
+
+### Rollback
+- Ré-éditer `reverse-proxy/active-upstream.conf` pour remettre la couleur précédente.
+- `docker exec reverse-proxy nginx -s reload` pour rétablir le trafic.
+- Aucune reconstruction ni redémarrage de Postgres n’est nécessaire, le retour arrière est immédiat.
+
+### Condition de déclenchement dans la CI
+- Le job `deploy` (section `deploy via Compose`) de [.github/workflows/ci.yml](.github/workflows/ci.yml) ne s’exécute que sur `push` vers `main` après `publish` réussi.
+- Sur le runner self-hosted, ce job applique la séquence décrite ci-dessus : il déploie d’abord la couleur inactive avec les images GHCR taguées par le commit, puis met à jour l’include Nginx et recharge le proxy.
+- Le rollback se limite à remettre l’ancienne couleur comme active, ce qui respecte l’exigence “déployer sans couper et revenir quasi instantanément”.
 
 ## Quick Start
 

@@ -1,3 +1,5 @@
+name: cloudnativeapplicationcurse-ci
+
 services:
   # PostgreSQL Database for CI
   postgres:

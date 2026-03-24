@@ -1,7 +1,10 @@
-/* eslint-disable */
 const express = require('express');
 const cors = require('cors');
+const os = require('os');
 require('dotenv').config();
+
+const logger = require('./logger');
+const requestLogger = require('./middleware/requestLogger');
 
 const userRoutes = require('./routes/userRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
@@ -20,6 +23,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -36,7 +40,6 @@ app.get('/health', (req, res) => {
 
 // Whoami endpoint for load balancing verification
 app.get('/whoami', (req, res) => {
-  const os = require('os');
   res.json({
     hostname: os.hostname(),
     container_id: os.hostname(),
@@ -52,7 +55,14 @@ app.get('/whoami', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error({
+    msg: 'request_error',
+    requestId: req.id,
+    method: req.method,
+    path: req.originalUrl,
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
   res.status(500).json({ 
     error: 'Something went wrong!',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
@@ -65,6 +75,10 @@ app.use('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info({
+    msg: 'server_started',
+    port: PORT,
+    env: process.env.NODE_ENV || 'development',
+    hostname: os.hostname()
+  });
 });
