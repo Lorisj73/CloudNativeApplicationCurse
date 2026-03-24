@@ -1,0 +1,98 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: monitoring-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring_net
+      - back_net
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: monitoring-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_FEATURE_TOGGLES_ENABLE: tempoSearchDashboard
+    depends_on:
+      loki:
+        condition: service_started
+      prometheus:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - monitoring_net
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: monitoring-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    expose:
+      - "3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - monitoring_net
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: monitoring-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    environment:
+      DOCKER_API_VERSION: "1.44"
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - monitoring_net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: monitoring-cadvisor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /sys:/sys:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    networks:
+      - monitoring_net
+      - back_net
+
+networks:
+  monitoring_net:
+    driver: bridge
+  back_net:
+    external: true
+    name: gym_back_network
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
